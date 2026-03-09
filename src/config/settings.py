@@ -58,10 +58,25 @@ class Settings(BaseSettings):
     crawler_min_delay: float = 1.0
     crawler_max_delay: float = 3.0
     crawler_default_queries: list[str] = [
+        # 기본 쿼리
         "동대문구 부동산",
         "청량리 재개발",
         "이문휘경 뉴타운",
         "GTX 청량리",
+        # 교통 인프라
+        "청량리역 환승센터",
+        "경춘선 복선전철",
+        "동대문구 GTX-A",
+        # 지역별 개발
+        "회기동 역세권개발",
+        "답십리 재개발",
+        "용두동 뉴타운",
+        # 가격 관련
+        "동대문구 아파트 시세",
+        "청량리 전세가",
+        # 정책
+        "동대문구 청약",
+        "서울 재개발 규제",
     ]
     crawler_date_range_days: int = 7
     crawler_max_results: int = 50
