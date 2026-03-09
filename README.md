@@ -4,249 +4,224 @@
 
 ## 프로젝트 개요
 
-HomeSignal AI는 동대문구 지역의 부동산 가격 예측과 뉴스 기반 인사이트를 제공하는 AI 서비스입니다. 단순 수치 예측을 넘어, **과거 뉴스 이슈와 정책적 신호(Signals)**를 결합한 고도화된 예측 시스템을 구축합니다.
+HomeSignal AI는 **Prophet + LightGBM 앙상블 모델**과 **RAG 기반 챗봇**을 결합하여 동대문구 부동산 시장을 분석하는 AI 서비스입니다.
 
-## 주요 기능
+### 핵심 기능
 
-### 1. 시계열 예측 (Time-Series Forecasting)
-- Prophet + LightGBM 앙상블 모델
-- 뉴스 키워드 빈도를 피처 변수로 활용
-- 상승 시점 전후 이슈 분석
+1. **시계열 예측**: 실거래가, 뉴스 키워드, 정책 이벤트를 통합한 가격 예측
+2. **RAG 챗봇**: Vector DB 기반 부동산 정보 상담
+3. **뉴스 분석**: 키워드 빈도 및 감성 시그널 분석
 
-### 2. RAG 챗봇 (RAG Chatbot)
-- Vector DB 기반 문서 검색
-- AI API (GPT-4o/Claude) 연동
-- 근거 기반 답변 생성
+---
 
-### 3. 뉴스 이슈 분석 (News Analysis)
-- 키워드별 빈도 분석
-- 상승 시점 전후 이슈 추출
-- 감성 분석 (Nice to Have)
+## 빠른 시작
 
-### 4. 상승 시점 감지 (Rise Point Detection) ⭐ NEW
-- 이동평균 교차 방식
-- 변동률 임계값 방식
-- 연속 상승 방식
-- 상승 시점 전후 윈도우 내 뉴스 키워드 추출
-
-## 기술 스택
-
-- **Backend:** FastAPI (Python 3.14)
-- **Database:** Supabase (PostgreSQL)
-- **Vector DB:** (별도 담당)
-- **AI:** OpenAI GPT-4o, Anthropic Claude 3.5 Sonnet
-- **ML:** Prophet, LightGBM, NumPy
-- **Cache:** Redis
-
-## 설치 및 실행
-
-### 환경 설정
+### 1. 환경 설정
 
 ```bash
 # 의존성 설치
-pip install -r requirements.txt
+uv sync --extra ml --extra dev --extra crawler
 
-# 또는 uv 사용
-uv sync
-
-# ML 의존성 포함
-uv sync --extra ml
+# .env 파일 생성
+cp .env.example .env
+# SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY 등 설정
 ```
 
-### 환경 변수
+### 2. 데이터베이스 설정
 
-`.env` 파일 생성:
-
-```env
-SUPABASE_URL=<your-supabase-url>
-SUPABASE_KEY=<your-supabase-key>
-OPENAI_API_KEY=<optional>
-ANTHROPIC_API_KEY=<optional>
-AI_PROVIDER=openai  # or anthropic
-REDIS_URL=redis://localhost:6379/0
-```
-
-### 개발 서버 실행
+Supabase SQL Editor에서 마이그레이션 실행:
 
 ```bash
-uvicorn src.main:app --reload
+# 1. 기본 테이블 (houses_data, news_signals, predictions)
+migrations/001_setup_pgvector.sql
+
+# 2. ML Feature 테이블 (ml_training_features, policy_events)
+migrations/004_create_ml_features_tables.sql
 ```
 
-### 테스트
+### 3. 데이터 수집
 
 ```bash
-# 전체 테스트
-pytest
+# 뉴스 크롤링
+uv run python -m src.crawler.cli crawl -q "GTX-C 청량리" "동대문구 재개발"
 
-# 특정 테스트 파일
-pytest tests/test_rise_point_detector.py -v
+# 임베딩 생성
+uv run python scripts/generate_embeddings.py
 
-# 커버리지 포함
-pytest --cov=src tests/
+# 정책 이벤트 수집
+uv run python scripts/collect_policy_events.py
 ```
 
-## 설정 파일
-
-### 키워드 설정 (`config/keywords.yaml`)
-
-부동산 관련 키워드를 카테고리별로 정의:
-
-```yaml
-categories:
-  transport:
-    primary: ["GTX", "GTX-C", "청량리역"]
-    synonyms: ["수도권광역급행철도", "환승센터"]
-  redevelopment:
-    primary: ["재개발", "뉴타운", "이문휘경뉴타운"]
-    synonyms: ["정비사업", "재건축"]
-  # ...
-```
-
-### 상승 시점 감지 설정 (`config/rise_point_config.yaml`)
-
-```yaml
-rise_point:
-  method: "ma_crossover"  # 감지 방법
-  short_ma_weeks: 5       # 단기 이동평균
-  long_ma_weeks: 20       # 장기 이동평균
-  lookback_weeks: 4       # 상승 시점 전 윈도우
-  lookahead_weeks: 4      # 상승 시점 후 윈도우
-```
-
-## API 엔드포인트
-
-### 시계열 예측
+### 4. ML Feature 생성 및 모델 학습
 
 ```bash
-GET /api/v1/forecast?region=동대문구&period=week&horizon=12
+# Feature 생성 (실거래가 + 뉴스 + 이벤트 + 계절성 통합)
+uv run python scripts/generate_ml_features.py
+
+# 모델 학습 (Prophet + LightGBM)
+uv run python scripts/train_forecast_model.py
 ```
 
-### RAG 챗봇
+### 5. API 서버 실행
 
 ```bash
-POST /api/v1/chat
-{
-  "message": "동대문구 아파트 가격이 오를까요?",
-  "session_id": "user-123"
-}
+uv run uvicorn src.main:app --reload
 ```
 
-### 뉴스 이슈 분석
+API 문서: http://localhost:8000/docs
 
-```bash
-GET /api/v1/news/insights?keywords=GTX,재개발&use_rise_points=true
-```
+---
 
 ## 프로젝트 구조
 
 ```
-home_signal_ai/
-├── config/                    # 설정 파일
-│   ├── keywords.yaml         # 키워드 정의
-│   └── rise_point_config.yaml # 상승 시점 감지 설정
-├── docs/                      # 문서
-│   ├── 01_PRD_HomeSignalAI.md
-│   ├── 02_Architecture_Design.md
-│   ├── 03_AI_Model_Pipeline.md
-│   ├── 04_Prompt_RAG_Strategy.md
-│   ├── 05_Deployment_Operation.md
-│   └── 06_Rise_Point_Keyword_Extraction.md
+homesignal-ai/
 ├── src/
-│   ├── forecast/             # 시계열 예측
-│   │   ├── rise_point_detector.py  # 상승 시점 감지 ⭐
+│   ├── forecast/          # 시계열 예측
+│   │   ├── service.py     # Prophet + LightGBM 앙상블
+│   │   ├── model_loader.py # 모델 로드 유틸
+│   │   └── rise_point_detector.py
+│   ├── chat/              # RAG 챗봇
 │   │   ├── service.py
-│   │   └── schemas.py
-│   ├── chat/                 # RAG 챗봇
-│   ├── news/                 # 뉴스 분석
-│   ├── ingest/               # 데이터 수집
-│   └── shared/               # 공통 모듈
-│       ├── keyword_config.py      # 키워드 설정 로더 ⭐
-│       ├── rise_point_config.py   # 상승 시점 설정 로더 ⭐
-│       ├── data_repository.py
-│       └── database.py
-└── tests/                    # 테스트
-    ├── test_rise_point_detector.py ⭐
-    └── test_keyword_config.py      ⭐
+│   │   ├── planner/       # Query Planner Agent
+│   │   └── extractors/    # 하이브리드 키워드 추출
+│   ├── news/              # 뉴스 분석
+│   ├── crawler/           # Google News 크롤러
+│   ├── ingest/            # 데이터 수집 API
+│   └── shared/            # 공통 모듈
+├── scripts/
+│   ├── generate_ml_features.py    # ML Feature 생성
+│   ├── train_forecast_model.py    # 모델 학습
+│   ├── collect_policy_events.py   # 정책 이벤트 수집
+│   └── generate_embeddings.py     # 벡터 임베딩 생성
+├── migrations/
+│   ├── 001_setup_pgvector.sql
+│   └── 004_create_ml_features_tables.sql
+├── config/
+│   ├── keywords.yaml              # 뉴스 키워드 정의
+│   ├── policy_events.yaml         # 정책 이벤트 정의
+│   └── rise_point_config.yaml
+├── models/                        # 학습된 모델 저장
+│   ├── prophet_청량리동_week_v1.pkl
+│   └── lightgbm_청량리동_week_v1.pkl
+├── frontend/                      # Next.js 프론트엔드
+│   ├── app/                       # 다크모드 UI
+│   ├── components/                # 공통 컴포넌트
+│   └── styles/                    # 디자인 토큰
+└── docs/                          # 문서
 ```
 
-## 상승 시점 키워드 추출 기능
+---
 
-### 개요
+## 핵심 문서
 
-가격 상승 시점 전후의 뉴스 키워드를 추출하여 시계열 예측 모델의 피처 변수로 활용합니다.
+| 문서 | 내용 |
+|------|------|
+| [CLAUDE.md](CLAUDE.md) | 개발 가이드 (명령어, 아키텍처) |
+| [docs/01_PRD_HomeSignalAI.md](docs/01_PRD_HomeSignalAI.md) | 요구사항 정의 |
+| [docs/03_AI_Model_Pipeline.md](docs/03_AI_Model_Pipeline.md) | ML 파이프라인 |
+| [docs/ML_Feature_통합_테이블_가이드.md](docs/ML_Feature_통합_테이블_가이드.md) | Feature 테이블 가이드 |
+| [docs/12_Vector_DB_Setup_Guide.md](docs/12_Vector_DB_Setup_Guide.md) | Vector DB 설정 |
+| [VERCEL_DEPLOYMENT_GUIDE.md](VERCEL_DEPLOYMENT_GUIDE.md) | Vercel 배포 가이드 |
 
-### 데이터 흐름
+---
 
+## 기술 스택
+
+### Backend
+- **Framework**: FastAPI
+- **Database**: Supabase (PostgreSQL + pgvector)
+- **ML**: Prophet, LightGBM, scikit-learn
+- **AI**: OpenAI GPT-4o, Anthropic Claude 3.5 Sonnet
+- **Cache**: Redis
+
+### Frontend
+- **Framework**: Next.js 15 (App Router)
+- **Styling**: Tailwind CSS (다크모드)
+- **Charts**: Recharts
+- **State**: React Query
+
+---
+
+## ML 파이프라인
+
+### 1. Feature 통합
+
+**ml_training_features** 테이블에 다음을 통합:
+- 실거래가 집계 (avg_price, transaction_count)
+- 뉴스 키워드 빈도 (8개 카테고리)
+- 정책 이벤트 더미 (5개 타입)
+- 계절성 더미 (개학/이사/결혼)
+- 이동평균 (5주, 20주)
+
+### 2. 모델 학습
+
+- **Prophet**: 트렌드, 계절성, Regressor (뉴스, 이벤트)
+- **LightGBM**: 모든 Feature 학습 (뉴스 가중치)
+- **Ensemble**: Prophet 60% + LightGBM 40%
+
+### 3. 예측 서빙
+
+- 학습된 모델 로드 (models/)
+- 최신 Feature 조회 (ml_training_features)
+- 앙상블 예측 실행
+- 신뢰구간 포함 응답
+
+---
+
+## 개발 워크플로우
+
+### 신규 Feature 추가
+1. `migrations/004_create_ml_features_tables.sql`에 컬럼 추가
+2. `scripts/generate_ml_features.py`에 생성 로직 추가
+3. `scripts/train_forecast_model.py`에 Feature 매핑 추가
+4. 재학습 및 평가
+
+### 신규 정책 이벤트 추가
+1. `config/policy_events.yaml`에 이벤트 추가
+2. `uv run python scripts/collect_policy_events.py` 실행
+3. Feature 재생성 및 모델 재학습
+
+---
+
+## 테스트
+
+```bash
+# 전체 테스트
+uv run pytest
+
+# ML Feature 테스트
+uv run pytest tests/test_ml_features.py -v
+
+# 커버리지 리포트
+uv run pytest --cov=src tests/
 ```
-시계열 데이터
-    ↓
-RisePointDetector (상승 시점 감지)
-    ↓
-윈도우 생성 [T-4주, T+4주]
-    ↓
-뉴스 키워드 빈도 집계
-    ↓
-피처 변수 (news_freq_gtx, news_freq_redev, ...)
-    ↓
-Prophet/LightGBM 학습
+
+---
+
+## 배포
+
+### Backend (Vercel Serverless)
+```bash
+vercel --prod
 ```
 
-### 사용 예시
-
-```python
-from src.forecast.rise_point_detector import RisePointDetector
-from src.shared.rise_point_config import get_rise_point_config
-from src.shared.keyword_config import get_keyword_config
-
-# 상승 시점 감지
-config = get_rise_point_config()
-detector = RisePointDetector(config)
-rise_points = detector.detect(dates, values)
-
-# 키워드 조회
-keyword_config = get_keyword_config()
-keywords = keyword_config.get_primary_keywords()
-
-# 상승 시점 윈도우 내 뉴스 키워드 빈도
-windows = [(rp.window_start, rp.window_end) for rp in rise_points]
-frequencies = await data_repo.get_news_keyword_frequency(
-    keywords=keywords,
-    rise_point_windows=windows,
-)
+### Frontend (Vercel)
+```bash
+cd frontend
+vercel --prod
 ```
 
-## 문서
+자세한 내용: [VERCEL_DEPLOYMENT_GUIDE.md](VERCEL_DEPLOYMENT_GUIDE.md)
 
-- [PRD (제품 요구사항 명세서)](docs/01_PRD_HomeSignalAI.md)
-- [아키텍처 설계](docs/02_Architecture_Design.md)
-- [AI 모델 파이프라인](docs/03_AI_Model_Pipeline.md)
-- [프롬프트 및 RAG 전략](docs/04_Prompt_RAG_Strategy.md)
-- [배포 및 운영](docs/05_Deployment_Operation.md)
-- [상승 시점 키워드 추출](docs/06_Rise_Point_Keyword_Extraction.md) ⭐
-
-## 개발 가이드
-
-### 코드 스타일
-
-- Python 3.14+
-- Type hints 사용
-- Async/await 패턴
-- Pydantic 스키마 검증
-
-### 커밋 메시지
-
-```
-feat: 새로운 기능 추가
-fix: 버그 수정
-docs: 문서 업데이트
-test: 테스트 추가/수정
-refactor: 코드 리팩토링
-```
+---
 
 ## 라이선스
 
 MIT License
 
+---
+
 ## 기여
 
-이슈 및 PR 환영합니다!
+HomeSignal AI는 동대문구 부동산 시장 분석을 위한 오픈소스 프로젝트입니다.

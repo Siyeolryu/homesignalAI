@@ -55,6 +55,13 @@ uv run python -m src.crawler.cli crawl -q "GTX-C 청량리" --max-results 50 --d
 uv run python scripts/generate_embeddings.py
 uv run python scripts/generate_embeddings.py --date-from 2024-01-01 --batch-size 50
 uv run python scripts/generate_embeddings.py --verify-only
+
+# ML Feature 생성 및 모델 학습
+uv run python scripts/collect_policy_events.py
+uv run python scripts/generate_ml_features.py
+uv run python scripts/generate_ml_features.py --region 청량리동 --dry-run
+uv run python scripts/train_forecast_model.py
+uv run python scripts/train_forecast_model.py --region 청량리동 --period-type month
 ```
 
 ## Environment Setup

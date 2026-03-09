@@ -1,0 +1,126 @@
+# HomeSignal AI - 정책 이벤트 정의
+# ML 모델의 이벤트 더미 변수 생성용
+
+events:
+  # GTX 관련 이벤트
+  - date: "2024-03-15"
+    type: "gtx_announcement"
+    name: "GTX-C 청량리역 착공 발표"
+    description: "GTX-C 노선 청량리역 착공 공식 발표"
+    impact_level: "high"
+    region: "청량리동"
+  
+  - date: "2024-11-20"
+    type: "gtx_announcement"
+    name: "GTX-C 2028년 개통 목표 확정"
+    description: "국토교통부 GTX-C 노선 개통 일정 확정 발표"
+    impact_level: "high"
+    region: null  # 전체 동대문구 영향
+  
+  # 재개발 관련 이벤트
+  - date: "2024-09-10"
+    type: "redevelopment_approval"
+    name: "이문휘경뉴타운 정비계획 승인"
+    description: "서울시 이문휘경뉴타운 정비계획 최종 승인"
+    impact_level: "high"
+    region: "이문동"
+  
+  - date: "2024-05-22"
+    type: "redevelopment_approval"
+    name: "청량리 7구역 재개발 조합 설립"
+    description: "청량리 7구역 재개발 조합 설립인가"
+    impact_level: "medium"
+    region: "청량리동"
+  
+  # 금리 관련 이벤트
+  - date: "2024-01-25"
+    type: "interest_rate"
+    name: "한국은행 기준금리 동결 (3.50%)"
+    description: "한국은행 금융통화위원회 기준금리 동결 결정"
+    impact_level: "medium"
+    region: null
+  
+  - date: "2024-06-20"
+    type: "interest_rate"
+    name: "한국은행 기준금리 0.25%p 인하 (3.25%)"
+    description: "한국은행 금융통화위원회 기준금리 인하 결정"
+    impact_level: "high"
+    region: null
+  
+  - date: "2024-10-15"
+    type: "interest_rate"
+    name: "한국은행 기준금리 추가 0.25%p 인하 (3.00%)"
+    description: "한국은행 금융통화위원회 기준금리 추가 인하"
+    impact_level: "high"
+    region: null
+  
+  # 대출 규제 관련 이벤트
+  - date: "2024-02-08"
+    type: "loan_regulation"
+    name: "DSR 규제 완화 (40% → 50%)"
+    description: "금융위원회 DSR 규제 완화 발표"
+    impact_level: "high"
+    region: null
+  
+  - date: "2024-08-12"
+    type: "loan_regulation"
+    name: "생애최초 특례대출 한도 상향"
+    description: "생애최초 주택구입자 특례대출 한도 5억 → 6억 상향"
+    impact_level: "medium"
+    region: null
+  
+  # 분양 규제 관련 이벤트
+  - date: "2024-04-01"
+    type: "sales_restriction"
+    name: "청약 당첨자 전매 제한 완화"
+    description: "청약 당첨 후 전매 제한 기간 단축 (3년 → 2년)"
+    impact_level: "medium"
+    region: null
+  
+  - date: "2024-07-18"
+    type: "sales_restriction"
+    name: "동대문구 투기과열지구 해제"
+    description: "동대문구 일부 지역 투기과열지구 지정 해제"
+    impact_level: "high"
+    region: null
+  
+  # 공급 관련 이벤트
+  - date: "2024-03-28"
+    type: "supply_announcement"
+    name: "청량리 역세권 대규모 분양 계획 발표"
+    description: "청량리역 인근 1,200세대 규모 아파트 분양 계획"
+    impact_level: "medium"
+    region: "청량리동"
+  
+  - date: "2024-12-05"
+    type: "supply_announcement"
+    name: "동대문구 공공주택 3,000세대 공급 계획"
+    description: "서울시 동대문구 공공주택 대규모 공급 계획 발표"
+    impact_level: "high"
+    region: null
+
+# 이벤트 타입 정의
+event_types:
+  gtx_announcement:
+    description: "GTX 관련 발표 및 착공"
+    default_impact: "high"
+  
+  redevelopment_approval:
+    description: "재개발/뉴타운 승인 및 조합 설립"
+    default_impact: "high"
+  
+  interest_rate:
+    description: "한국은행 기준금리 변동"
+    default_impact: "high"
+  
+  loan_regulation:
+    description: "대출 규제 변화 (DSR, LTV 등)"
+    default_impact: "medium"
+  
+  sales_restriction:
+    description: "분양 및 전매 규제 변화"
+    default_impact: "medium"
+  
+  supply_announcement:
+    description: "대규모 공급 계획 발표"
+    default_impact: "medium"

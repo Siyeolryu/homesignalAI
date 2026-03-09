@@ -1,6 +1,8 @@
 import logging
 from datetime import date, timedelta
 
+import pandas as pd
+
 from src.config import settings
 from src.forecast.rise_point_detector import RisePointDetector
 from src.shared.cache import CacheClient
@@ -12,6 +14,7 @@ from src.shared.database import get_supabase_client
 from src.shared.keyword_config import get_keyword_config
 from src.shared.rise_point_config import get_rise_point_config
 
+from .model_loader import get_model_loader
 from .schemas import (
     ForecastPoint,
     ForecastRequest,
@@ -29,10 +32,13 @@ class ForecastService:
         self,
         cache: CacheClient | None = None,
         data_repo: DataRepositoryInterface | None = None,
+        use_real_model: bool = True,
     ):
         self.cache = cache
         self.db = get_supabase_client()
         self.data_repo = data_repo or get_data_repository()
+        self.use_real_model = use_real_model
+        self.model_loader = get_model_loader() if use_real_model else None
 
     async def get_forecast(self, request: ForecastRequest) -> ForecastResponse:
         """시계열 예측 결과 반환"""
@@ -86,20 +92,104 @@ class ForecastService:
     async def _run_forecast(self, request: ForecastRequest) -> list[ForecastPoint]:
         """
         시계열 예측 모델 실행
-
-        TODO: Prophet + LightGBM 앙상블 모델 연동
-        현재는 Mock 데이터 반환
+        
+        use_real_model=True: Prophet + LightGBM 앙상블 사용
+        use_real_model=False: Mock 데이터 반환
         """
+        if self.use_real_model and self.model_loader:
+            return await self._run_real_forecast(request)
+        else:
+            return await self._run_mock_forecast(request)
+
+    async def _run_real_forecast(self, request: ForecastRequest) -> list[ForecastPoint]:
+        """실제 Prophet + LightGBM 앙상블 예측"""
+        try:
+            # 1. 모델 로드
+            prophet_model = self.model_loader.load_prophet(
+                region=request.region, period_type=request.period
+            )
+            lightgbm_model = self.model_loader.load_lightgbm(
+                region=request.region, period_type=request.period
+            )
+
+            if not prophet_model or not lightgbm_model:
+                logger.warning("모델 파일이 없어 Mock 데이터로 대체합니다.")
+                return await self._run_mock_forecast(request)
+
+            # 2. 최신 Feature 조회 (ml_training_features)
+            latest_features = await self._get_latest_features(
+                request.region, request.period
+            )
+
+            if latest_features.empty:
+                logger.warning("Feature 데이터가 없어 Mock 데이터로 대체합니다.")
+                return await self._run_mock_forecast(request)
+
+            # 3. 미래 날짜 생성
+            last_date = latest_features["period_date"].max()
+            delta = timedelta(weeks=1) if request.period == "week" else timedelta(days=30)
+            future_dates = [last_date + (delta * i) for i in range(1, request.horizon + 1)]
+
+            # 4. Prophet 예측
+            prophet_future = pd.DataFrame({"ds": future_dates})
+            
+            # Regressor 추가 (최신 값 사용 또는 평균)
+            for regressor in prophet_model.extra_regressors.keys():
+                if regressor in latest_features.columns:
+                    prophet_future[regressor] = latest_features[regressor].iloc[-1]
+                else:
+                    prophet_future[regressor] = 0
+
+            prophet_pred = prophet_model.predict(prophet_future)
+
+            # 5. LightGBM 예측
+            feature_cols = lightgbm_model.feature_name_
+            X_future = pd.DataFrame()
+            for col in feature_cols:
+                if col in latest_features.columns:
+                    X_future[col] = [latest_features[col].iloc[-1]] * request.horizon
+                else:
+                    X_future[col] = 0
+
+            lightgbm_pred = lightgbm_model.predict(X_future)
+
+            # 6. 앙상블 (가중 평균)
+            prophet_weight, lightgbm_weight = self.model_loader.get_ensemble_weights(
+                request.region, request.period
+            )
+            ensemble_pred = (prophet_pred["yhat"].values * prophet_weight) + (
+                lightgbm_pred * lightgbm_weight
+            )
+
+            # 7. ForecastPoint 생성
+            forecast_points = []
+            for i, future_date in enumerate(future_dates):
+                forecast_points.append(
+                    ForecastPoint(
+                        date=future_date,
+                        value=round(float(ensemble_pred[i]), 2),
+                        lower_bound=round(float(prophet_pred["yhat_lower"].values[i]), 2),
+                        upper_bound=round(float(prophet_pred["yhat_upper"].values[i]), 2),
+                    )
+                )
+
+            logger.info(f"실제 모델 예측 완료: {len(forecast_points)}개 포인트")
+            return forecast_points
+
+        except Exception as e:
+            logger.error(f"실제 모델 예측 실패, Mock으로 대체: {e}")
+            return await self._run_mock_forecast(request)
+
+    async def _run_mock_forecast(self, request: ForecastRequest) -> list[ForecastPoint]:
+        """Mock 예측 데이터 반환 (Fallback)"""
         today = date.today()
         delta = timedelta(weeks=1) if request.period == "week" else timedelta(days=30)
 
-        # Mock 예측 데이터
         forecast_points = []
-        base_value = 105.0  # 기준 지수
+        base_value = 105.0
 
         for i in range(1, request.horizon + 1):
             forecast_date = today + (delta * i)
-            # 상승 트렌드 가정 (실제 모델로 교체 필요)
             value = base_value + (i * 0.5)
             forecast_points.append(
                 ForecastPoint(
@@ -111,6 +201,29 @@ class ForecastService:
             )
 
         return forecast_points
+
+    async def _get_latest_features(
+        self, region: str, period: str, limit: int = 52
+    ) -> pd.DataFrame:
+        """ml_training_features에서 최신 Feature 조회"""
+        response = (
+            self.db.table("ml_training_features")
+            .select("*")
+            .eq("region", region)
+            .eq("period_type", period)
+            .order("period_date", desc=True)
+            .limit(limit)
+            .execute()
+        )
+
+        if not response.data:
+            return pd.DataFrame()
+
+        df = pd.DataFrame(response.data)
+        df["period_date"] = pd.to_datetime(df["period_date"]).dt.date
+        df = df.sort_values("period_date")
+
+        return df
 
     async def _get_news_weights(self, region: str) -> list[NewsWeightSummary]:
         """
