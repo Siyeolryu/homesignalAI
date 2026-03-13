@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AlertTriangle, Info } from "lucide-react";
 
 const DONG_GU_MAP: Record<string, string> = {
   회기동: "동대문구", 이문동: "동대문구", 청량리동: "동대문구", 전농동: "동대문구",
@@ -25,6 +26,7 @@ type Prediction = {
   change_1m_pct: number;
   change_3m_pct: number;
   base_ym: string;
+  confidence_score: number | null;
 };
 
 type GuStat = {
@@ -33,7 +35,23 @@ type GuStat = {
   change: string;
   change3m: string;
   dongCount: number;
+  confidence: number;
 };
+
+function ConfidenceBadge({ score }: { score: number }) {
+  if (score >= 70) {
+    return <Badge className="bg-primary/20 text-primary border-0 text-xs">높음</Badge>;
+  }
+  if (score >= 40) {
+    return <Badge className="bg-yellow-500/20 text-yellow-400 border-0 text-xs">보통</Badge>;
+  }
+  return (
+    <Badge className="bg-destructive/20 text-destructive border-0 text-xs gap-1">
+      <AlertTriangle className="h-3 w-3" />
+      낮음
+    </Badge>
+  );
+}
 
 interface RegionAnalysisProps {
   searchQuery: string;
@@ -70,18 +88,18 @@ export function RegionAnalysis({ searchQuery }: RegionAnalysisProps) {
 
         const stats = filtered.map((gu) => {
           const rows = guMap[gu];
-          const avgPrice =
-            rows.reduce((s, r) => s + (r.current_price_10k ?? 0), 0) / rows.length;
-          const change1m =
-            rows.reduce((s, r) => s + (r.change_1m_pct ?? 0), 0) / rows.length;
-          const change3m =
-            rows.reduce((s, r) => s + (r.change_3m_pct ?? 0), 0) / rows.length;
+          const avgPrice = rows.reduce((s, r) => s + (r.current_price_10k ?? 0), 0) / rows.length;
+          const change1m = rows.reduce((s, r) => s + (r.change_1m_pct ?? 0), 0) / rows.length;
+          const change3m = rows.reduce((s, r) => s + (r.change_3m_pct ?? 0), 0) / rows.length;
+          const scores = rows.map((r) => r.confidence_score ?? 50);
+          const confidence = Math.round(scores.reduce((s, v) => s + v, 0) / scores.length);
           return {
             name: gu,
             avgPrice: `${(avgPrice / 10000).toFixed(1)}억`,
             change: `${change1m > 0 ? "+" : ""}${change1m.toFixed(1)}%`,
             change3m: `${change3m > 0 ? "+" : ""}${change3m.toFixed(1)}%`,
             dongCount: rows.length,
+            confidence,
           };
         });
 
@@ -90,6 +108,8 @@ export function RegionAnalysis({ searchQuery }: RegionAnalysisProps) {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [searchQuery]);
+
+  const hasLowConfidence = guStats.some((s) => s.confidence < 40);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -109,6 +129,26 @@ export function RegionAnalysis({ searchQuery }: RegionAnalysisProps) {
           </Badge>
         )}
       </div>
+
+      {/* 면책 공지 */}
+      <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/40 border border-border/50">
+        <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          본 예측은 <strong className="text-foreground">참고용</strong>이며 실제 시장과 다를 수 있습니다.
+          Ridge 회귀 모델 기반으로 월 거래량이 적은 지역은 신뢰도가 낮게 표시됩니다.
+          투자 결정 시 반드시 전문가 상담을 권장합니다.
+        </p>
+      </div>
+
+      {/* 신뢰도 낮음 경고 */}
+      {hasLowConfidence && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+          <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+          <p className="text-xs text-destructive">
+            일부 지역의 신뢰도가 낮습니다. 월 거래량 부족으로 예측 정확도가 떨어질 수 있습니다.
+          </p>
+        </div>
+      )}
 
       {/* District Comparison Table */}
       <Card className="bg-card border-border">
@@ -131,6 +171,7 @@ export function RegionAnalysis({ searchQuery }: RegionAnalysisProps) {
                     <th className="text-right py-3 px-4 text-muted-foreground font-medium">평균 매매가</th>
                     <th className="text-right py-3 px-4 text-muted-foreground font-medium">1개월 변동</th>
                     <th className="text-right py-3 px-4 text-muted-foreground font-medium">3개월 예측</th>
+                    <th className="text-center py-3 px-4 text-muted-foreground font-medium">신뢰도</th>
                     <th className="text-right py-3 px-4 text-muted-foreground font-medium">분석 동 수</th>
                   </tr>
                 </thead>
@@ -145,6 +186,9 @@ export function RegionAnalysis({ searchQuery }: RegionAnalysisProps) {
                       <td className={`py-3 px-4 text-right font-medium ${stat.change3m.startsWith("+") ? "text-primary" : "text-destructive"}`}>
                         {stat.change3m}
                       </td>
+                      <td className="py-3 px-4 text-center">
+                        <ConfidenceBadge score={stat.confidence} />
+                      </td>
                       <td className="py-3 px-4 text-right text-muted-foreground">
                         {stat.dongCount}개 동
                       </td>
@@ -158,7 +202,7 @@ export function RegionAnalysis({ searchQuery }: RegionAnalysisProps) {
       </Card>
 
       <p className="text-xs text-muted-foreground text-center">
-        * 리스크 분석은 과거 데이터 기반 AI 모델의 예측이며, 실제 시장 상황과 다를 수 있습니다.
+        * 신뢰도는 해당 구의 월 평균 거래량 기반으로 산출됩니다 (높음 ≥70점 / 보통 40~69점 / 낮음 &lt;40점)
       </p>
     </div>
   );
