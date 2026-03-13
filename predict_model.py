@@ -264,6 +264,9 @@ def correlation_analysis(df: pd.DataFrame):
     print(f"  {'변수':<28} {'상관계수':>8}  막대")
     print("  " + "-" * 55)
     for feat, val in target_corr.items():
+        import math
+        if val is None or (isinstance(val, float) and math.isnan(val)):
+            continue
         bar  = "#" * max(1, int(abs(val) * 20))
         sign = "+" if val >= 0 else "-"
         print(f"  {feat:<28} {sign}{abs(val):.3f}  {bar}")
@@ -392,6 +395,19 @@ def plot_importance(pipe: Pipeline, horizon: int) -> pd.Series:
     return real
 
 
+# 예측 변화율 클리핑 상한 (부동산 현실적 한계)
+CLIP_BOUNDS = {1: 10.0, 2: 15.0, 3: 20.0}
+
+
+def calc_confidence(trade_count: float) -> int:
+    """월 거래량 기반 신뢰도 점수 (0~100)
+    - 20건 이상: 높음 (100점 상한)
+    - 10건: 50점
+    - 5건 이하: 낮음
+    """
+    return min(100, max(0, int(float(trade_count or 0) * 5)))
+
+
 # ─────────────────────────────────────────
 # 6. 향후 예측
 # ─────────────────────────────────────────
@@ -415,15 +431,19 @@ def predict_next(df: pd.DataFrame, pipes: dict) -> pd.DataFrame:
         X_pred = pd.DataFrame([row[feature_cols]])
         current = row["avg_price_10k"]
         dong_name = row["dong"]
+        confidence = calc_confidence(row.get("trade_count", 0))
         rec = {
             "동":          dong_name,
             "기준월":      row["ym"].strftime("%Y-%m"),
             "현재가(만원)": int(current),
+            "신뢰도":      confidence,
         }
         pcts = {}
         for h in [1, 2, 3]:
             try:
-                pred_pct   = pipes[h].predict(X_pred)[0]
+                pred_pct = float(pipes[h].predict(X_pred)[0])
+                # 클리핑: 비현실적 극단값 제거
+                pred_pct = float(np.clip(pred_pct, -CLIP_BOUNDS[h], CLIP_BOUNDS[h]))
                 pred_price = current * (1 + pred_pct / 100)
                 diff       = pred_price - current
                 rec[f"{h}개월후_예측(만원)"] = f"{pred_price:,.0f}"
@@ -821,6 +841,7 @@ def save_predictions_to_supabase(pred_df: pd.DataFrame):
             "change_1m_pct":      to_float(row["1개월후_변동(%)"]),
             "change_2m_pct":      to_float(row["2개월후_변동(%)"]),
             "change_3m_pct":      to_float(row["3개월후_변동(%)"]),
+            "confidence_score":   to_int(row.get("신뢰도", 50)),
         })
 
     url     = f"{SUPABASE_URL}/rest/v1/predictions"
