@@ -1,6 +1,6 @@
 "use client";
 
-import { Newspaper, TrendingUp, TrendingDown, Minus, ExternalLink } from "lucide-react";
+import { Newspaper, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -15,18 +15,19 @@ interface NewsItem {
   keywords: string[];
   published_at: string;
   sentiment: Sentiment;
+  score: number;
 }
 
-const POSITIVE_KEYWORDS = ["완화", "상승", "회복", "활기", "상승세", "호재", "인하", "재개발", "재건축 허용"];
-const NEGATIVE_KEYWORDS = ["하락", "규제", "위기", "침체", "폭락", "강화", "제한", "세금", "부담"];
+const POSITIVE_KW = ["완화", "상승", "회복", "활기", "호재", "인하", "재개발", "상승세", "뉴타운"];
+const NEGATIVE_KW = ["하락", "규제", "위기", "침체", "폭락", "강화", "제한", "세금"];
 
-function getSentiment(keywords: string[], title: string): Sentiment {
-  const text = [...keywords, title].join(" ");
-  const posScore = POSITIVE_KEYWORDS.filter((k) => text.includes(k)).length;
-  const negScore = NEGATIVE_KEYWORDS.filter((k) => text.includes(k)).length;
-  if (posScore > negScore) return "positive";
-  if (negScore > posScore) return "negative";
-  return "neutral";
+function getSentiment(keywords: string[], title: string): { sentiment: Sentiment; score: number } {
+  const text = [...(keywords ?? []), title].join(" ");
+  const pos = POSITIVE_KW.filter((k) => text.includes(k)).length;
+  const neg = NEGATIVE_KW.filter((k) => text.includes(k)).length;
+  if (pos > neg) return { sentiment: "positive", score: pos * 8 };
+  if (neg > pos) return { sentiment: "negative", score: neg * -8 };
+  return { sentiment: "neutral", score: 0 };
 }
 
 function timeAgo(dateStr: string): string {
@@ -39,12 +40,13 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("ko-KR");
 }
 
-function SentimentBadge({ sentiment }: { sentiment: Sentiment }) {
+
+function SentimentBadge({ sentiment, score }: { sentiment: Sentiment; score: number }) {
   if (sentiment === "positive") {
     return (
       <Badge className="bg-primary/20 text-primary border-0 gap-1">
         <TrendingUp className="h-3 w-3" />
-        긍정 시그널
+        +{Math.abs(score)}% 긍정 시그널
       </Badge>
     );
   }
@@ -52,7 +54,7 @@ function SentimentBadge({ sentiment }: { sentiment: Sentiment }) {
     return (
       <Badge className="bg-destructive/20 text-destructive border-0 gap-1">
         <TrendingDown className="h-3 w-3" />
-        부정 시그널
+        {score}% 부정 시그널
       </Badge>
     );
   }
@@ -71,11 +73,11 @@ export function NewsSentimentFeed() {
   useEffect(() => {
     fetch("/api/news")
       .then((r) => r.json())
-      .then((data: { id: string; title: string; url: string; keywords: string[]; published_at: string }[]) => {
-        const items = data.map((d) => ({
-          ...d,
-          sentiment: getSentiment(d.keywords ?? [], d.title),
-        }));
+      .then((data) => {
+        const items: NewsItem[] = (data ?? []).map((d: { id: string; title: string; url: string; keywords: string[]; published_at: string }) => {
+          const { sentiment, score } = getSentiment(d.keywords ?? [], d.title);
+          return { ...d, sentiment, score };
+        });
         setNews(items);
       })
       .catch(console.error)
@@ -95,42 +97,33 @@ export function NewsSentimentFeed() {
           {loading ? (
             <p className="text-sm text-muted-foreground text-center py-8">로딩 중...</p>
           ) : news.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">뉴스 데이터 없음</p>
-          ) : (
-            <div className="space-y-4">
-              {news.map((item) => (
-                <div
-                  key={item.id}
-                  className="p-3 rounded-lg bg-secondary/50 border border-border hover:border-primary/30 transition-all cursor-pointer"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <a
-                        href={item.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-start gap-1 group"
-                      >
-                        <h4 className="text-sm font-medium text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
-                          {item.title}
-                        </h4>
-                        <ExternalLink className="h-3 w-3 text-muted-foreground mt-0.5 shrink-0" />
-                      </a>
-                      <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground mb-2">
-                        <span>{timeAgo(item.published_at)}</span>
-                        {(item.keywords ?? []).slice(0, 3).map((k) => (
-                          <span key={k} className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                            {k}
-                          </span>
-                        ))}
-                      </div>
+            <p className="text-sm text-muted-foreground text-center py-8">뉴스 데이터가 없습니다</p>
+          ) : null}
+          <div className="space-y-4">
+            {news.map((item) => (
+              <a
+                key={item.id}
+                href={item.url !== "#" ? item.url : undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block p-3 rounded-lg bg-secondary/50 border border-border hover:border-primary/30 transition-all cursor-pointer"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-medium text-foreground line-clamp-2 mb-2">
+                      {item.title}
+                    </h4>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>{timeAgo(item.published_at)}</span>
                     </div>
                   </div>
-                  <SentimentBadge sentiment={item.sentiment} />
                 </div>
-              ))}
-            </div>
-          )}
+                <div className="mt-3">
+                  <SentimentBadge sentiment={item.sentiment} score={item.score} />
+                </div>
+              </a>
+            ))}
+          </div>
         </ScrollArea>
       </CardContent>
     </Card>
