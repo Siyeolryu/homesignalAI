@@ -29,6 +29,7 @@ price_trend.png
 
 # CSV 결과 (재생성 가능)
 prediction_result.csv
+prediction_result_apt.csv
 
 # PDF (대용량)
 HomeSignal_AI_Technical_Blueprint.pdf
