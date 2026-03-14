@@ -1,12 +1,24 @@
 #!/usr/bin/env python3
 """
-Vercel 환경변수 설정 스크립트 (Python)
-사용법: python scripts/setup_vercel_env.py
+Vercel 환경변수 자동 설정 스크립트
+
+로컬 .env 파일을 읽어 Vercel 프로젝트에 환경변수를 자동으로 설정합니다.
+
+Requirements:
+    - Vercel CLI 설치: npm i -g vercel
+    - Vercel 로그인: vercel login
+
+Usage:
+    uv run python scripts/setup_vercel_env.py
+    uv run python scripts/setup_vercel_env.py --environment production
+    uv run python scripts/setup_vercel_env.py --dry-run  # 테스트 실행
 """
 
+import argparse
 import subprocess
 import sys
-from typing import List, Tuple
+from pathlib import Path
+from typing import List
 
 # 색상 코드 (Windows 호환)
 class Colors:
@@ -65,6 +77,47 @@ def run_command(cmd: List[str], input_text: str = None) -> bool:
         print(f"{Colors.WARNING}설치: npm i -g vercel{Colors.ENDC}")
         return False
 
+def load_env_file(env_file: Path) -> dict[str, str]:
+    """
+    .env 파일을 파싱하여 환경변수 딕셔너리 반환
+
+    Args:
+        env_file: .env 파일 경로
+
+    Returns:
+        환경변수 딕셔너리 {key: value}
+    """
+    env_vars = {}
+    if not env_file.exists():
+        print_warning(f"{env_file} 파일을 찾을 수 없습니다.")
+        return env_vars
+
+    with open(env_file, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            # 주석이나 빈 줄 무시
+            if not line or line.startswith("#"):
+                continue
+
+            # key=value 파싱
+            if "=" in line:
+                key, value = line.split("=", 1)
+                key = key.strip()
+                value = value.strip()
+
+                # 따옴표 제거
+                if value.startswith('"') and value.endswith('"'):
+                    value = value[1:-1]
+                elif value.startswith("'") and value.endswith("'"):
+                    value = value[1:-1]
+
+                # placeholder 값 스킵
+                if "placeholder" not in value.lower() and value:
+                    env_vars[key] = value
+
+    return env_vars
+
+
 def check_vercel_cli():
     """Vercel CLI 설치 확인"""
     print_info("Vercel CLI 확인 중...")
@@ -83,91 +136,152 @@ def check_vercel_cli():
         print("설치: npm i -g vercel")
         return False
 
-def set_env_var(name: str, value: str, environments: List[str] = None):
-    """환경변수 설정"""
-    if environments is None:
-        environments = ["production", "preview", "development"]
 
-    print(f"\n{Colors.OKCYAN}Setting {name}...{Colors.ENDC}")
+def set_vercel_env(
+    key: str, value: str, environment: str, dry_run: bool = False
+) -> bool:
+    """
+    Vercel 환경변수 설정
 
-    for env in environments:
-        cmd = ["vercel", "env", "add", name, env]
-        if run_command(cmd, input_text=value):
-            print(f"  ✓ {env} 환경 설정 완료")
-        else:
-            print(f"  ✗ {env} 환경 설정 실패")
+    Args:
+        key: 환경변수 키
+        value: 환경변수 값
+        environment: 환경 (production, preview, development)
+        dry_run: 테스트 모드 (실제로 설정하지 않음)
 
-    print_success(f"{name} 설정 완료")
-
-def main():
-    """메인 함수"""
-    print_header("Vercel 환경변수 자동 설정")
-
-    # 1. Vercel CLI 확인
-    if not check_vercel_cli():
-        sys.exit(1)
-
-    # 2. Supabase 환경변수 설정
-    print_header("1. Supabase 환경변수 설정")
-
-    supabase_vars = {
-        "SUPABASE_URL": "https://yietqoikdaqpwmmvamtv.supabase.co",
-        "SUPABASE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpZXRxb2lrZGFxcHdtbXZhbXR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwMjMyNjksImV4cCI6MjA4NzU5OTI2OX0.cnGFGUsn05TpVIvZyk6Sn6jEUdkTPzqc9YHOLnPr6NY",
-        "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpZXRxb2lrZGFxcHdtbXZhbXR2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjAyMzI2OSwiZXhwIjoyMDg3NTk5MjY5fQ.F4HvWwUiFMysGP06DW45v5RbxG7UoW38q8JI2z1MIDM"
-    }
-
-    for name, value in supabase_vars.items():
-        set_env_var(name, value)
-
-    # 3. App 설정 환경변수
-    print_header("2. App 설정 환경변수")
-
-    # APP_ENV (환경별로 다르게)
-    print(f"\n{Colors.OKCYAN}Setting APP_ENV...{Colors.ENDC}")
-    set_env_var("APP_ENV", "production", ["production"])
-    set_env_var("APP_ENV", "preview", ["preview"])
-    set_env_var("APP_ENV", "development", ["development"])
-
-    # DEBUG (환경별로 다르게)
-    print(f"\n{Colors.OKCYAN}Setting DEBUG...{Colors.ENDC}")
-    set_env_var("DEBUG", "false", ["production", "preview"])
-    set_env_var("DEBUG", "true", ["development"])
-
-    # AI_PROVIDER
-    set_env_var("AI_PROVIDER", "openai")
-
-    # 4. OPENAI_API_KEY (사용자 입력)
-    print_header("3. OPENAI_API_KEY 설정")
-
-    print_warning("OPENAI_API_KEY를 입력해주세요.")
-    print("(OpenAI API 키가 없다면 Enter를 눌러 건너뛰세요)")
-    print("")
+    Returns:
+        성공 여부
+    """
+    if dry_run:
+        print(f"  [DRY-RUN] vercel env add {key} {environment}")
+        return True
 
     try:
-        openai_key = input("OPENAI_API_KEY (선택사항): ").strip()
+        # vercel env add 명령 실행
+        process = subprocess.Popen(
+            ["vercel", "env", "add", key, environment],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
 
-        if openai_key:
-            set_env_var("OPENAI_API_KEY", openai_key)
+        # 값 입력
+        stdout, stderr = process.communicate(input=value)
+
+        if process.returncode == 0:
+            return True
         else:
-            print_warning("OPENAI_API_KEY 건너뛰기 (나중에 설정 가능)")
-    except KeyboardInterrupt:
-        print("\n\n중단됨")
-        sys.exit(0)
+            print(f"{Colors.FAIL}  ✗ 설정 실패: {stderr}{Colors.ENDC}")
+            return False
 
-    # 5. 완료
-    print_header("✅ 환경변수 설정 완료!")
+    except Exception as e:
+        print(f"{Colors.FAIL}  ✗ 오류: {e}{Colors.ENDC}")
+        return False
 
-    print_info("설정된 환경변수 확인:")
-    subprocess.run(["vercel", "env", "ls"])
 
-    print("\n")
-    print_header("🚀 다음 단계")
-    print("1. vercel --prod (프로덕션 배포)")
-    print("2. curl https://your-backend.vercel.app/health (검증)")
-    print("")
-    print("💡 OPENAI_API_KEY를 나중에 설정하려면:")
-    print("   vercel env add OPENAI_API_KEY production")
-    print("")
+def main():
+    parser = argparse.ArgumentParser(
+        description="Vercel 환경변수 자동 설정"
+    )
+    parser.add_argument(
+        "--environment",
+        "-e",
+        choices=["production", "preview", "development"],
+        default="production",
+        help="Vercel 환경 (기본: production)",
+    )
+    parser.add_argument(
+        "--env-file",
+        type=Path,
+        default=Path(".env"),
+        help=".env 파일 경로 (기본: .env)",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="테스트 실행 (실제로 설정하지 않음)",
+    )
+    parser.add_argument(
+        "--skip-optional",
+        action="store_true",
+        help="선택적 환경변수 건너뛰기",
+    )
+    args = parser.parse_args()
+
+    print_header("Vercel 환경변수 설정 스크립트")
+
+    # Vercel CLI 확인
+    if not args.dry_run and not check_vercel_cli():
+        sys.exit(1)
+
+    # .env 파일 로드
+    print_info(f".env 파일 로드: {args.env_file}")
+    env_vars = load_env_file(args.env_file)
+
+    if not env_vars:
+        print_warning("유효한 환경변수가 없습니다.")
+        sys.exit(1)
+
+    print_success(f"{len(env_vars)}개의 환경변수 발견")
+
+    # 필수 환경변수 확인
+    required_vars = ["SUPABASE_URL", "SUPABASE_KEY"]
+    missing_vars = [var for var in required_vars if var not in env_vars]
+
+    if missing_vars:
+        print_warning(f"필수 환경변수 누락: {', '.join(missing_vars)}")
+        print("계속하려면 .env 파일에 추가하세요.")
+        sys.exit(1)
+
+    # Vercel에 환경변수 설정
+    print_header(f"Vercel에 환경변수 설정 (Environment: {args.environment})")
+
+    if args.dry_run:
+        print_warning("DRY-RUN 모드: 실제로 설정하지 않습니다.\n")
+
+    success_count = 0
+    fail_count = 0
+
+    # 선택적 환경변수 목록
+    optional_vars = [
+        "REDIS_URL",
+        "DATABASE_URL",
+        "ANTHROPIC_API_KEY",
+        "CRAWLER_REQUESTS_PER_MINUTE",
+    ]
+
+    for key, value in env_vars.items():
+        # 선택적 변수 스킵 옵션
+        if args.skip_optional and key in optional_vars:
+            print(f"  ⏭️  {key} 건너뜀 (선택적 변수)")
+            continue
+
+        # 민감한 정보 마스킹 출력
+        masked_value = value[:8] + "..." if len(value) > 8 else "***"
+        print(f"\n{Colors.OKCYAN}설정 중: {key}={masked_value}{Colors.ENDC}")
+
+        if set_vercel_env(key, value, args.environment, args.dry_run):
+            print_success(f"  ✓ {key} 설정 완료")
+            success_count += 1
+        else:
+            fail_count += 1
+
+    # 결과 출력
+    print_header("설정 완료")
+    print_success(f"성공: {success_count}개")
+    if fail_count > 0:
+        print(f"{Colors.FAIL}실패: {fail_count}개{Colors.ENDC}")
+
+    if not args.dry_run:
+        print_header("다음 단계")
+        print("1. Vercel Dashboard에서 환경변수 확인")
+        print("   https://vercel.com/dashboard")
+        print("2. 재배포하여 환경변수 적용")
+        print("   vercel --prod")
+
+    sys.exit(0 if fail_count == 0 else 1)
+
 
 if __name__ == "__main__":
     try:

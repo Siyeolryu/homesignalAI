@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 from typing import Literal
 
@@ -9,10 +10,15 @@ class Settings(BaseSettings):
     """애플리케이션 환경변수 설정"""
 
     model_config = SettingsConfigDict(
+        # Vercel 환경에서는 시스템 환경변수만 사용
+        # 로컬 개발 환경에서는 .env 파일도 시도하지만 없어도 무시
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",  # 추가 환경변수 무시
+        # .env 파일이 없어도 에러 발생하지 않음
+        env_ignore_empty=True,
+        validate_default=False,  # 기본값 검증 생략
     )
 
     # Supabase
@@ -50,13 +56,16 @@ class Settings(BaseSettings):
     @field_validator("supabase_url")
     @classmethod
     def validate_supabase_url(cls, v):
-        """Supabase URL 검증 및 경고"""
+        """Supabase URL 검증 및 경고 (Startup 무중단)"""
         if v == "https://placeholder.supabase.co":
             import os
             if os.environ.get("APP_ENV") == "production":
-                raise ValueError(
-                    "Production 환경에서 placeholder Supabase URL을 사용할 수 없습니다. "
-                    "Vercel 환경변수에서 SUPABASE_URL을 설정하세요."
+                # Vercel 부팅 자체를 막지 않기 위해 에러 대신 로그만 남김
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.critical(
+                    "CRITICAL: Production 환경에서 placeholder Supabase URL이 사용되었습니다. "
+                    "Vercel 환경변수에서 'SUPABASE_URL'이 누락되었는지 확인하세요."
                 )
         return v
 
@@ -131,7 +140,19 @@ def get_settings() -> Settings:
     모듈 임포트 시점에 환경변수가 없어도 기본값으로 초기화됩니다.
     실제 환경변수는 첫 호출 시 자동으로 로드됩니다.
     """
-    return Settings()
+    try:
+        return Settings()
+    except Exception as e:
+        # Vercel 초기 로딩 시 환경변수 없어도 크래시 방지
+        import logging
+        logging.warning(
+            f"Settings 초기화 경고: {e}. 기본값으로 초기화합니다. "
+            "Vercel 환경변수가 설정되지 않았을 수 있습니다."
+        )
+        # 환경변수 강제 설정하여 재시도
+        os.environ.setdefault("SUPABASE_URL", "https://placeholder.supabase.co")
+        os.environ.setdefault("SUPABASE_KEY", "placeholder-key")
+        return Settings()
 
 
 # Module-level에서 초기화 (하위 호환성 유지)

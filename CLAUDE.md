@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 HomeSignal AI is a real estate time-series prediction and RAG chatbot service targeting Dongdaemun-gu (동대문구), Seoul. The project combines numerical forecasting with news/event-based signals to provide evidence-based property market insights.
 
-**Current State:** Backend API structure implemented with mock data. Prophet + LightGBM models and real Supabase integration are TODO.
+**Current State:** Backend API structure with domain-driven design, ML Feature 통합 테이블, Prophet + LightGBM 앙상블 학습 스크립트 구현. Frontend 다크모드 UI 완료. Vercel 배포 가능 상태.
 
 ## Development Commands
 
@@ -23,6 +23,9 @@ uv sync --extra dev
 # Install with crawler dependencies (BeautifulSoup, lxml)
 uv sync --extra crawler
 
+# Install with NLP dependencies (KoNLPy, Mecab for Korean text processing)
+uv sync --extra nlp
+
 # Run development server
 uv run uvicorn src.main:app --reload
 
@@ -35,8 +38,14 @@ uv run pytest tests/test_forecast.py
 # Run single test function
 uv run pytest tests/test_forecast.py::test_get_forecast -v
 
+# Run tests by keyword
+uv run pytest -k "planner" -v
+
 # Run with coverage
 uv run pytest --cov=src tests/
+
+# Run with coverage HTML report
+uv run pytest --cov=src --cov-report=html tests/
 
 # Lint
 uv run ruff check src/
@@ -62,6 +71,12 @@ uv run python scripts/generate_ml_features.py
 uv run python scripts/generate_ml_features.py --region 청량리동 --dry-run
 uv run python scripts/train_forecast_model.py
 uv run python scripts/train_forecast_model.py --region 청량리동 --period-type month
+
+# Data management & validation
+uv run python scripts/split_train_test_data.py
+uv run python scripts/split_train_test_data.py --region 청량리동 --train-ratio 0.8
+uv run python scripts/validate_data_integrity.py
+uv run python scripts/validate_data_integrity.py --check-rpc
 ```
 
 ## Environment Setup
@@ -72,6 +87,7 @@ Create `.env` file with required variables:
 SUPABASE_URL=<required>
 SUPABASE_KEY=<required>  # anon/public key (SELECT용)
 SUPABASE_SERVICE_ROLE_KEY=<required>  # service_role key (INSERT/UPDATE용, Ingest API 필수)
+SUPABASE_TIMEOUT=10  # Supabase query timeout (seconds)
 
 # Optional: Direct PostgreSQL connection for data loading
 DATABASE_URL=postgresql://user:pass@host:5432/db
@@ -87,6 +103,9 @@ REDIS_URL=redis://localhost:6379/0
 # App Environment
 APP_ENV=development  # development | staging | production
 DEBUG=true
+
+# CORS Settings (production required)
+ALLOWED_ORIGINS=  # comma-separated list (e.g., https://app.vercel.app,https://custom.com)
 
 # Cache TTL (seconds)
 CACHE_TTL_FORECAST=3600  # 1 hour
@@ -269,18 +288,85 @@ Settings in `src/config/settings.py`:
 
 ## AI/ML Pipeline
 
-### Time-Series Model Stack (TODO)
-- **Prophet:** Baseline for trends and seasonality
+### Time-Series Model Stack
+- **Prophet:** Baseline for trends and seasonality with news/event regressors
 - **LightGBM:** Learning weights for news/policy features
-- **Ensemble:** Weighted average of both models
+- **Ensemble:** Weighted average (Prophet 60% + LightGBM 40%)
 
-### Key Features (피처)
-- News keyword frequency (GTX, 재개발, 이문휘경뉴타운)
-- Event dummy variables (policy announcements, sales restrictions)
-- Moving averages (5-week short-term, 20-week long-term)
+### ML Feature 통합 테이블 (`ml_training_features`)
+All features are unified in a single table for training:
+- **실거래가 집계**: avg_price, transaction_count
+- **뉴스 키워드 빈도** (8 categories): transport_gtx, redevelopment, supply, policy, school, environment, finance, event
+- **정책 이벤트 더미** (5 types): gtx_announcement, redevelopment_approval, sales_restriction, interest_rate_change, tax_policy
+- **계절성 더미**: 개학(March), 이사(spring/fall), 결혼(May/Oct)
+- **이동평균**: ma_5, ma_20
+- **Train/Test Split**: train_test_split column (train | test | validation)
+
+### Training Workflow
+```bash
+# 1. 정책 이벤트 수집
+uv run python scripts/collect_policy_events.py
+
+# 2. Feature 생성 (실거래가 + 뉴스 + 이벤트 + 계절성 통합)
+uv run python scripts/generate_ml_features.py
+
+# 3. Train/Test 분할
+uv run python scripts/split_train_test_data.py --train-ratio 0.8
+
+# 4. 모델 학습
+uv run python scripts/train_forecast_model.py --region 청량리동
+
+# 5. 검증
+uv run python scripts/validate_data_integrity.py --check-rpc
+```
 
 ### Evaluation Metrics
 - RMSE, MAE, MAPE, directional accuracy
+
+### Model Files
+Trained models are saved in `models/` directory:
+- `prophet_{region}_{period}_v{version}.pkl`
+- `lightgbm_{region}_{period}_v{version}.pkl`
+
+## Frontend Architecture
+
+### Tech Stack
+- **Framework**: Next.js 15 (App Router)
+- **Styling**: Tailwind CSS with dark mode support
+- **Charts**: Recharts for time-series visualization
+- **State**: React Query for server state management
+
+### Design System
+- **Color Palette**: 다크모드 중심 디자인 (slate 계열)
+- **Components**: `frontend/components/` - 재사용 가능한 공통 컴포넌트
+- **Type Safety**: TypeScript with strict mode
+
+### Deployment
+- **Platform**: Vercel (serverless)
+- **Backend Integration**: API routes proxy to FastAPI backend
+- **Environment**: See `docs/08_Vercel_Architecture_Guide.md`
+
+### Vercel Deployment Commands
+```bash
+# Backend (FastAPI)
+vercel --prod
+
+# Frontend (Next.js)
+cd frontend
+vercel --prod
+
+# Set environment variables manually
+vercel env add SUPABASE_URL production
+vercel env add OPENAI_API_KEY production
+
+# Automated environment variable setup
+uv run python scripts/setup_vercel_env.py --environment production
+uv run python scripts/setup_vercel_env.py --dry-run  # test mode
+
+# Validate environment variables
+uv run python scripts/validate_env.py
+uv run python scripts/validate_env.py --strict  # production mode
+```
 
 ## Development Guidelines
 
@@ -292,6 +378,7 @@ Settings in `src/config/settings.py`:
 
 ### Development Principles
 - Before writing code, verify alignment with `docs/01_PRD_HomeSignalAI.md`
+- **API 계약 준수**: `docs/07_API_Contract_Rules.md`에 정의된 DB/Backend/Frontend 공통 규칙 (SSOT) 반드시 확인
 - Always include data sources in AI responses
 - Implement caching for identical requests (target: 2.0s response time)
 - Handle API errors gracefully with fallback to numerical data (see `src/chat/fallback.py`)
@@ -309,7 +396,10 @@ Settings in `src/config/settings.py`:
 ### Key Test Files
 - `tests/test_rise_point_detector.py`: Rise point detection algorithms
 - `tests/test_keyword_config.py`: YAML keyword configuration loading
-- `tests/test_planner.py`: Query planner agent pipeline
+- `tests/test_planner.py`: Query planner agent pipeline (4-stage)
+- `tests/test_ml_features.py`: ML feature generation and integration
+- `tests/test_rpc_methods.py`: Database RPC function validation
+- `tests/chat/test_keyword_extraction.py`: Hybrid keyword extraction (KoNLPy + TF-IDF)
 
 ## Key Documentation
 
@@ -321,8 +411,12 @@ Settings in `src/config/settings.py`:
 | `docs/04_Prompt_RAG_Strategy.md` | RAG logic, prompt templates |
 | `docs/05_Deployment_Operation.md` | Testing, deployment, monitoring |
 | `docs/06_Rise_Point_Keyword_Extraction.md` | Rise point detection & keyword extraction strategy |
+| **`docs/07_API_Contract_Rules.md`** | **DB/Backend/Frontend 공통 규칙 (SSOT)** ⭐ |
+| `docs/08_Vercel_Architecture_Guide.md` | Vercel 배포 아키텍처 및 설정 가이드 |
 | `docs/12_Vector_DB_Setup_Guide.md` | Vector DB (pgvector) setup, embedding generation, data ingestion |
-| `.cursor/rules/homesignal-ai-master.mdc` | Cursor IDE rules (project identity, AI design principles)
+| `docs/13_Database_Schema_and_Relationships.md` | Database schema, relationships, RPC functions |
+| `docs/ML_Feature_통합_테이블_가이드.md` | ML Feature 테이블 구조 및 생성 가이드 |
+| `.cursor/rules/homesignal-ai-master.mdc` | Cursor IDE rules (project identity, AI design principles) |
 
 ## Critical Architectural Decisions
 
@@ -350,26 +444,73 @@ Keywords and rise point parameters change frequently during model tuning. YAML f
 - FastAPI backend structure with domain-driven design
 - Mock-first development pattern
 - Ingest API with JWT authentication
-- News crawler with rate limiting
+- News crawler with rate limiting and keyword extraction
 - Query planner agent (4-stage pipeline)
 - Rise point detection algorithms
-- Keyword configuration system
+- Keyword configuration system (8 categories, 95+ keywords)
 - AI client abstraction (OpenAI/Anthropic)
+- ML Feature 통합 테이블 (ml_training_features, policy_events)
+- Prophet + LightGBM 앙상블 학습 스크립트
+- Database RPC functions (시계열 집계, 키워드 빈도 등)
+- Train/Test data split utilities
+- Frontend 다크모드 UI/UX (Next.js 15)
+- Vercel 배포 설정
 
 ### 🚧 TODO (Priority Order)
-1. **Supabase schema setup** - Execute `migrations/001_setup_pgvector.sql` in Supabase SQL Editor
-2. **Vector DB data collection** - Run crawler + embedding generation (see `docs/12_Vector_DB_Setup_Guide.md`)
-3. **Prophet + LightGBM models** - Replace mock forecast with real ML predictions
-4. **국토교통부 API integration** - Fetch real transaction data
-5. **Cache implementation** - Redis-based caching for forecast/chat responses
-6. **Production deployment** - Docker, monitoring, logging
+1. **Real transaction data ingestion** - 국토교통부 API integration
+2. **Model training with real data** - Execute `scripts/train_forecast_model.py` with production data
+3. **Cache implementation** - Redis-based caching for forecast/chat responses
+4. **Production monitoring** - Logging, error tracking, performance metrics
+5. **A/B testing** - Prompt versioning and model comparison
+
+## Database Setup & Migrations
+
+### Migration Files (Supabase SQL Editor에서 순서대로 실행)
+
+```bash
+# 1. 기본 테이블 생성 (houses_data, news_signals, predictions) + pgvector
+migrations/001_setup_pgvector.sql
+
+# 2. AI 예측 전용 컬럼 추가
+migrations/002_add_ai_predictions_only.sql
+
+# 3. Houses 데이터 추가 컬럼
+migrations/003_add_houses_data_columns.sql
+
+# 4. ML Feature 통합 테이블 생성 (ml_training_features, policy_events)
+migrations/004_create_ml_features_tables.sql
+
+# 5. Train/Test Split 컬럼 추가
+migrations/005_add_train_test_split.sql
+
+# 6. RPC 메서드 추가 (시계열 집계, 키워드 빈도, 대시보드 요약 등)
+migrations/006_add_rpc_methods.sql
+```
+
+### Database RPC Functions
+
+`migrations/006_add_rpc_methods.sql`에 정의된 주요 RPC 함수:
+- `aggregate_houses_time_series()`: 부동산 거래 데이터를 주/월 단위로 집계
+- `get_news_keyword_frequency()`: 지정 기간의 뉴스 키워드 빈도 반환
+- `get_latest_predictions()`: 최신 예측 데이터 조회
+- `get_ml_training_data()`: Train/Test/Validation 데이터 조회
+- `get_policy_events_by_period()`: 기간별 정책 이벤트 조회
+- `get_dashboard_summary()`: 대시보드 요약 데이터 (최신 가격, 예측, 뉴스 개수)
+
+**사용 예시** (`src/shared/data_repository.py`에서 호출):
+```python
+result = await client.rpc(
+    "aggregate_houses_time_series",
+    {"p_region": "청량리동", "p_period_type": "week"}
+).execute()
+```
 
 ## Vector DB Setup & Data Collection
 
 ### Quick Start (벡터 DB 초기 설정)
 
 ```bash
-# 1. Supabase에서 마이그레이션 실행
+# 1. Supabase에서 마이그레이션 실행 (위 Database Setup 섹션 참조)
 # Supabase SQL Editor에서 migrations/001_setup_pgvector.sql 실행
 
 # 2. 뉴스 크롤링 (초기 데이터 수집)
@@ -397,3 +538,62 @@ uv run python scripts/generate_embeddings.py --verify-only
 - `docs/12_Vector_DB_Setup_Guide.md` - Complete setup guide
 
 **See:** `docs/12_Vector_DB_Setup_Guide.md` for detailed instructions
+
+## Vercel Deployment Troubleshooting
+
+### Common Issue: `ValidationError: Field required`
+
+**Error:**
+```
+pydantic_core._pydantic_core.ValidationError: 2 validation errors for Settings
+supabase_url
+  Field required [type=missing, input_value={}, input_type=dict]
+supabase_key
+  Field required [type=missing, input_value={}, input_type=dict]
+```
+
+**Root Cause:** Environment variables are not set in Vercel Dashboard or not being loaded properly.
+
+**Solution:**
+
+1. **Verify environment variables are set in Vercel Dashboard:**
+   - Go to https://vercel.com/dashboard
+   - Select your project → Settings → Environment Variables
+   - Ensure `SUPABASE_URL`, `SUPABASE_KEY` are set for Production environment
+
+2. **Use automated setup script:**
+   ```bash
+   # Load .env file and push to Vercel
+   uv run python scripts/setup_vercel_env.py --environment production
+   ```
+
+3. **Manual setup via CLI:**
+   ```bash
+   vercel env add SUPABASE_URL production
+   vercel env add SUPABASE_KEY production
+   vercel env add SUPABASE_SERVICE_ROLE_KEY production
+   vercel env add OPENAI_API_KEY production
+   ```
+
+4. **Redeploy after setting environment variables:**
+   ```bash
+   vercel --prod --force
+   ```
+
+5. **Verify deployment:**
+   ```bash
+   curl https://your-app.vercel.app/health
+   ```
+
+**Reference:** See `docs/VERCEL_ENV_SETUP.md` for complete guide
+
+### Environment Variable Best Practices
+
+- **Never hardcode credentials** in code or commit `.env` files
+- **Use separate Supabase projects** for production/development
+- **Set `APP_ENV=production`** and `DEBUG=false` in production
+- **Configure CORS** via `ALLOWED_ORIGINS` environment variable
+- **Validate locally** before deploying:
+  ```bash
+  uv run python scripts/validate_env.py --strict
+  ```
