@@ -1,8 +1,49 @@
 # Vercel Deployment Fix - FastAPI Entrypoint Error 해결
 
 **작성일:** 2026-03-16
-**문제:** `Error: No fastapi entrypoint found`
-**상태:** ✅ RESOLVED
+**최종 수정:** 2026-03-16 (builds deprecated 경고 수정)
+**문제:**
+1. ✅ `Error: No fastapi entrypoint found` → RESOLVED
+2. ✅ `WARNING: Due to builds existing...` → RESOLVED (2026 베스트 프랙티스 적용)
+
+**상태:** ✅ FULLY RESOLVED
+
+---
+
+## 🆕 2026-03-16 업데이트: builds Deprecated 경고 해결
+
+### **추가 문제**
+```
+WARNING! Due to `builds` existing in your configuration file,
+the Build and Development Settings defined in your Project Settings will not apply.
+```
+
+### **근본 원인**
+- `builds` 속성은 2026년 현재 **deprecated** (레거시 기능)
+- Vercel Dashboard의 프로젝트 설정이 무시됨
+- 현대적 FastAPI 배포는 **Zero-configuration** 원칙 사용
+
+### **해결책**
+```json
+// ❌ Before (레거시)
+{
+  "builds": [{"src": "api/index.py", "use": "@vercel/python"}],
+  "routes": [{"src": "/(.*)", "dest": "api/index.py"}]
+}
+
+// ✅ After (2026 베스트 프랙티스)
+{
+  "rewrites": [
+    {"source": "/(.*)", "destination": "/api/index"}
+  ]
+}
+```
+
+### **결과**
+- ✅ 경고 제거
+- ✅ Dashboard 설정 활성화
+- ✅ 자동 프레임워크 감지 활용
+- ✅ 빌드 속도 개선
 
 ---
 
@@ -127,26 +168,9 @@ async def emergency_health():
 
 ---
 
-### 4. **vercel.json 간소화**
+### 4. **vercel.json 현대화 (2026 베스트 프랙티스)**
 
-#### Before:
-```json
-{
-  "version": 2,
-  "builds": [...],
-  "routes": [...],
-  "env": {
-    "PYTHON_VERSION": "3.12"
-  },
-  "functions": {
-    "api/**/*.py": {
-      "runtime": "python3.12"
-    }
-  }
-}
-```
-
-#### After:
+#### Before (레거시 - builds 사용):
 ```json
 {
   "version": 2,
@@ -168,10 +192,30 @@ async def emergency_health():
 }
 ```
 
+❌ **문제:** `builds` 속성은 **deprecated** (2026년 현재 레거시 기능)
+⚠️ **경고:** "Due to builds existing in your configuration file, the Build and Development Settings defined in your Project Settings will not apply"
+
+#### After (현대적 - rewrites 사용):
+```json
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/index"
+    }
+  ]
+}
+```
+
 ✅ **변경 이유:**
-- Vercel은 Python 런타임을 자동으로 감지함 (명시 불필요)
-- 불필요한 `env`, `functions` 섹션 제거로 설정 단순화
-- 빌드 속도 개선
+- **Zero-configuration 접근:** Vercel이 `api/index.py`를 자동 감지
+- **Modern routing:** `builds` 대신 `rewrites` 사용 (공식 권장)
+- **Settings 활성화:** Dashboard의 프로젝트 설정이 정상 작동
+- **Build 속도 개선:** 불필요한 설정 제거
+
+✅ **maxLambdaSize 설정 방법:**
+- ~~vercel.json에서 설정~~ (더 이상 사용 불가)
+- ✅ **Vercel Dashboard** → Project Settings → Functions → Max Duration/Memory 설정
 
 ---
 
@@ -265,7 +309,21 @@ curl -X POST https://your-app.vercel.app/api/v1/forecast \
 
 ---
 
-## 🎯 Vercel FastAPI 배포 Best Practices
+## 🎯 Vercel FastAPI 배포 Best Practices (2026)
+
+### 0. **Zero-Configuration 원칙** ⭐
+
+**Vercel 2026의 핵심 철학:**
+- ✅ `api/` 디렉토리에 Python 파일 → **자동 FastAPI 감지**
+- ✅ `vercel.json` **최소화 또는 제거**
+- ✅ Project Settings (Dashboard)로 제어
+- ❌ `builds` 속성 사용 금지 (deprecated)
+
+**자동 감지 조건:**
+```
+api/index.py 존재 + FastAPI app 객체 export
+→ Vercel이 자동으로 Serverless Function 생성
+```
 
 ### 1. **파일 구조**
 ```
@@ -280,7 +338,57 @@ your-project/
 └── pyproject.toml        # ⚠️ Optional (CLI scripts 제외)
 ```
 
-### 2. **api/index.py 템플릿**
+### 2. **vercel.json 설정 (2026 권장)**
+
+**Option 1: 완전 제거** (가장 간단)
+```bash
+# vercel.json 삭제
+rm vercel.json
+```
+→ Vercel이 모든 것을 자동 감지
+
+**Option 2: Minimal Rewrites** (라우팅 커스터마이징 필요 시)
+```json
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/index"
+    }
+  ]
+}
+```
+
+**Option 3: 고급 설정 (헤더, CORS 등)**
+```json
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/index"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
+      ]
+    }
+  ]
+}
+```
+
+⚠️ **절대 사용 금지:**
+```json
+// ❌ DEPRECATED - 사용하지 마세요!
+{
+  "builds": [...],
+  "routes": [...]
+}
+```
+
+### 3. **api/index.py 템플릿**
 ```python
 import os
 import sys
@@ -300,19 +408,42 @@ from src.main import app
 __all__ = ["app"]
 ```
 
-### 3. **환경변수 우선순위**
+### 4. **Vercel Dashboard 설정 (중요!)**
+
+**builds 제거 후 설정 방법:**
+
+Vercel Dashboard → 프로젝트 선택 → Settings
+
+#### **General Settings**
+- **Framework Preset:** Other (자동 감지)
+- **Root Directory:** (비워두기 - 프로젝트 루트)
+- **Build Command:** (비워두기 - Python은 자동 빌드)
+- **Output Directory:** (비워두기)
+- **Install Command:** `pip install -r requirements.txt`
+
+#### **Functions Settings**
+- **Region:** Auto (또는 Seoul - icn1)
+- **Node.js Version:** (해당 없음)
+- **Memory:** 512 MB (필요시 1024 MB)
+- **Max Duration:** 10s (Hobby) / 60s (Pro)
+
+#### **Environment Variables**
+- SUPABASE_URL, SUPABASE_KEY 등 모든 필수 변수 설정
+- Environment: Production, Preview, Development 각각 설정
+
+### 5. **환경변수 우선순위**
 ```
 1. Vercel Dashboard → Environment Variables (최우선)
 2. api/index.py → os.environ.setdefault() (fallback)
 3. .env 파일 (로컬 개발만, Vercel에서 무시됨)
 ```
 
-### 4. **의존성 관리**
+### 6. **의존성 관리**
 - ✅ `requirements.txt` 사용 (Vercel 공식 지원)
 - ⚠️ `pyproject.toml` dependencies는 자동 설치되지 않음
 - ❌ `uv.lock`은 Vercel에서 무시됨
 
-### 5. **번들 크기 제한**
+### 7. **번들 크기 제한**
 - **Serverless Function:** 250MB (uncompressed)
 - **Edge Function:** 1MB (compressed)
 - ML 라이브러리(Prophet, LightGBM)는 별도 서비스로 분리 권장
@@ -356,7 +487,42 @@ sys.path.insert(0, str(root))
 **해결:**
 - Lazy import 패턴 사용
 - ML 라이브러리는 별도 서비스로 분리
-- Lambda 메모리 크기 증가 (vercel.json)
+- Dashboard에서 Memory 크기 증가 (512MB → 1024MB)
+
+---
+
+### 문제 4: ⚠️ "Due to builds existing in your configuration file..."
+
+**경고 메시지:**
+```
+WARNING! Due to `builds` existing in your configuration file,
+the Build and Development Settings defined in your Project Settings will not apply.
+```
+
+**원인:** `vercel.json`에 deprecated `builds` 속성 사용
+
+**해결:**
+```json
+// ❌ 제거
+{
+  "builds": [...],
+  "routes": [...]
+}
+
+// ✅ 교체
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/index"
+    }
+  ]
+}
+```
+
+**추가 설정:**
+- Vercel Dashboard → Settings에서 Memory, Duration 등 설정
+- `maxLambdaSize` 같은 옵션은 더 이상 vercel.json에서 설정 불가
 
 ---
 
