@@ -18,13 +18,22 @@ This prevents Pydantic ValidationError during module loading.
 # ═══════════════════════════════════════════════════════════════
 import os
 
+# CRITICAL: Set fallback defaults for missing OR EMPTY environment variables
+# setdefault() only works if the key doesn't exist, but Vercel might set empty strings
+# So we explicitly check for empty strings and None values
+
+def ensure_env_var(key: str, default: str) -> None:
+    """Ensure environment variable is set with a non-empty value"""
+    value = os.environ.get(key)
+    if not value or value.strip() == "":
+        os.environ[key] = default
+
 # Set fallback defaults BEFORE any other imports
-# These values are used ONLY if Vercel environment variables are not set
-os.environ.setdefault("SUPABASE_URL", "https://placeholder.supabase.co")
-os.environ.setdefault("SUPABASE_KEY", "placeholder-key")
-os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "placeholder-service-key")
-os.environ.setdefault("APP_ENV", "production")
-os.environ.setdefault("DEBUG", "false")
+ensure_env_var("SUPABASE_URL", "https://placeholder.supabase.co")
+ensure_env_var("SUPABASE_KEY", "placeholder-key")
+ensure_env_var("SUPABASE_SERVICE_ROLE_KEY", "placeholder-service-key")
+ensure_env_var("APP_ENV", "production")
+ensure_env_var("DEBUG", "false")
 
 # ═══════════════════════════════════════════════════════════════
 # STEP 2: Python Path Setup

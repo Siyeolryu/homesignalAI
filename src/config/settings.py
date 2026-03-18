@@ -19,6 +19,7 @@ class Settings(BaseSettings):
         # .env 파일이 없어도 에러 발생하지 않음
         env_ignore_empty=True,
         validate_default=False,  # 기본값 검증 생략
+        str_strip_whitespace=True,  # 문자열 공백 제거
     )
 
     # Supabase
@@ -29,6 +30,31 @@ class Settings(BaseSettings):
     supabase_timeout: int = 10
     # PostgreSQL 직접 연결
     database_url: str | None = None
+
+    # Field validators for handling empty strings and None values
+    @field_validator("supabase_url", mode="before")
+    @classmethod
+    def validate_supabase_url(cls, v: Any) -> str | None:
+        """빈 문자열을 None으로 변환하여 placeholder 설정 트리거"""
+        if v == "" or v is None:
+            return None
+        return v
+
+    @field_validator("supabase_key", mode="before")
+    @classmethod
+    def validate_supabase_key(cls, v: Any) -> str | None:
+        """빈 문자열을 None으로 변환하여 placeholder 설정 트리거"""
+        if v == "" or v is None:
+            return None
+        return v
+
+    @field_validator("supabase_service_role_key", mode="before")
+    @classmethod
+    def validate_supabase_service_role_key(cls, v: Any) -> str | None:
+        """빈 문자열을 None으로 변환하여 placeholder 설정 트리거"""
+        if v == "" or v is None:
+            return None
+        return v
 
 
     # AI API
