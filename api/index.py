@@ -1,22 +1,13 @@
-"""
-Vercel Serverless Function Entry Point for FastAPI
-
-This file serves as the entry point for Vercel's Python runtime.
-It imports the FastAPI app from src/main.py and exports it for Vercel.
-
-Official Vercel FastAPI guide:
-https://vercel.com/docs/frameworks/fastapi
-
-CRITICAL SECTION: Environment Variables Setup
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Environment variables MUST be set BEFORE any imports that trigger Settings initialization.
-This prevents Pydantic ValidationError during module loading.
-"""
-
 # ═══════════════════════════════════════════════════════════════
 # STEP 1: Environment Variables (HIGHEST PRIORITY - BEFORE ALL IMPORTS!)
 # ═══════════════════════════════════════════════════════════════
 import os
+from fastapi import FastAPI # Explicit import for Vercel scanner
+
+# Vercel entrypoint must be discoverable at the top level
+app = FastAPI() 
+
+# CRITICAL: Set fallback defaults for missing OR EMPTY environment variables
 
 # CRITICAL: Set fallback defaults for missing OR EMPTY environment variables
 # setdefault() only works if the key doesn't exist, but Vercel might set empty strings
