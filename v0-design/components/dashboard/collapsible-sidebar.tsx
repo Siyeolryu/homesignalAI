@@ -8,21 +8,21 @@ import {
   Map,
   TrendingUp,
   FileText,
-  Search,
   Settings,
   HelpCircle,
+  Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-export type TabType = "overview" | "region" | "price" | "report" | "apt-search";
+export type TabType = "overview" | "region" | "price" | "report" | "apt";
 
 const menuItems: { icon: typeof LayoutDashboard; label: string; tab: TabType | null }[] = [
   { icon: LayoutDashboard, label: "종합 개요", tab: "overview" },
   { icon: Map, label: "지역 분석", tab: "region" },
   { icon: TrendingUp, label: "가격 동향", tab: "price" },
-  { icon: Search, label: "아파트 검색", tab: "apt-search" },
+  { icon: Building2, label: "아파트 검색", tab: "apt" },
   { icon: FileText, label: "AI 리포트", tab: "report" },
 ];
 

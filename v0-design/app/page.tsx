@@ -39,8 +39,8 @@ export default function DashboardPage() {
         return <RegionAnalysis searchQuery={searchQuery} />;
       case "price":
         return <PriceTrends searchQuery={searchQuery} />;
-      case "apt-search":
-        return <AptSearch searchQuery={searchQuery} />;
+      case "apt":
+        return <AptSearch />;
       case "report":
         return <AIReport searchQuery={searchQuery} />;
       default:
