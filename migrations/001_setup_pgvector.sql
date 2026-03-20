@@ -204,6 +204,7 @@ CREATE TABLE IF NOT EXISTS ai_predictions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
     -- 예측 정보
+    region TEXT DEFAULT '동대문구',
     model_version TEXT NOT NULL,
     target_date DATE NOT NULL,
     predicted_price NUMERIC(15, 2) NOT NULL,
@@ -219,6 +220,9 @@ CREATE TABLE IF NOT EXISTS ai_predictions (
 -- 12. ai_predictions 인덱스
 CREATE INDEX IF NOT EXISTS ai_predictions_target_date_idx
 ON ai_predictions (target_date DESC);
+
+CREATE INDEX IF NOT EXISTS ai_predictions_region_idx
+ON ai_predictions (region);
 
 CREATE INDEX IF NOT EXISTS ai_predictions_model_version_idx
 ON ai_predictions (model_version);

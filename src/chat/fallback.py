@@ -2,7 +2,7 @@
 
 from src.forecast.schemas import ForecastResponse
 
-from .schemas import ChatResponse, ForecastSummary, SourceReference
+from .schemas import ChatResponse, ForecastSummary
 
 FALLBACK_MESSAGE = """죄송합니다. 일시적 장애로 AI 해설을 생성하지 못했습니다.
 
@@ -36,7 +36,9 @@ def create_fallback_response(
         forecast_summary = ForecastSummary(
             trend=forecast.trend,
             confidence=forecast.confidence,
-            next_month_prediction=forecast.forecast[0].value if forecast.forecast else None,
+            next_month_prediction=forecast.forecast[0].value
+            if forecast.forecast
+            else None,
         )
     else:
         answer = "죄송합니다. 일시적 장애로 응답을 생성하지 못했습니다. 잠시 후 다시 시도해 주세요."

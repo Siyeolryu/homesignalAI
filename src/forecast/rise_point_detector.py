@@ -45,9 +45,7 @@ class RisePointDetector:
     def __init__(self, config: RisePointConfig | None = None):
         self.config = config or RisePointConfig()
 
-    def detect(
-        self, dates: list[date], values: list[float]
-    ) -> list[RisePoint]:
+    def detect(self, dates: list[date], values: list[float]) -> list[RisePoint]:
         """상승 시점을 감지합니다.
 
         Args:
@@ -82,9 +80,7 @@ class RisePointDetector:
 
         단기 MA가 장기 MA를 상향 돌파하는 시점을 감지
         """
-        short_ma = self._calculate_moving_average(
-            values, self.config.short_ma_weeks
-        )
+        short_ma = self._calculate_moving_average(values, self.config.short_ma_weeks)
         long_ma = self._calculate_moving_average(values, self.config.long_ma_weeks)
 
         rise_points = []
@@ -163,9 +159,7 @@ class RisePointDetector:
                     window_start = dates[i] - timedelta(
                         weeks=self.config.lookback_weeks
                     )
-                    window_end = dates[i] + timedelta(
-                        weeks=self.config.lookahead_weeks
-                    )
+                    window_end = dates[i] + timedelta(weeks=self.config.lookahead_weeks)
 
                     rise_points.append(
                         RisePoint(
@@ -188,7 +182,7 @@ class RisePointDetector:
         """이동평균 계산 (pure Python)"""
         if not values:
             return []
-        
+
         if len(values) < window:
             # 데이터가 윈도우보다 적으면 전체 평균으로 시작하거나 그대로 반환
             ma = []

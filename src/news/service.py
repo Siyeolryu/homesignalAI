@@ -43,9 +43,7 @@ class NewsService:
             top_issues=top_issues,
         )
 
-    async def _get_rise_point_windows(
-        self, region: str
-    ) -> list[tuple[date, date]]:
+    async def _get_rise_point_windows(self, region: str) -> list[tuple[date, date]]:
         """상승 시점 윈도우 조회"""
         try:
             time_series = await self.data_repo.get_houses_time_series(
@@ -80,7 +78,7 @@ class NewsService:
     ) -> list[KeywordInsight]:
         """
         키워드별 분석 수행
-        
+
         rise_point_windows가 제공되면 해당 윈도우 내 뉴스만 분석
         """
         keyword_frequencies = await self.data_repo.get_news_keyword_frequency(
@@ -138,13 +136,13 @@ class NewsService:
                     "headlines": [],
                 },
             )
-            
+
             trend = "유지"
             if kf.frequency > data.get("frequency", 0) * 1.2:
                 trend = "상승"
             elif kf.frequency < data.get("frequency", 0) * 0.8:
                 trend = "하락"
-            
+
             insights.append(
                 KeywordInsight(
                     keyword=kf.keyword,

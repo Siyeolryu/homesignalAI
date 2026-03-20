@@ -1,6 +1,5 @@
 """뉴스 크롤링 오케스트레이터"""
 
-import asyncio
 import logging
 import time
 

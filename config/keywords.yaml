@@ -136,6 +136,32 @@ categories:
       - "학원가"
       - "청량리숲"
 
+  election:
+    primary:
+      - "선거"
+      - "지방선거"
+      - "총선"
+      - "대선"
+      - "선거 공약"
+      - "부동산 공약"
+      - "지역구 공약"
+      - "시정 운영 계획"
+    synonyms:
+      - "당선자"
+      - "후보자 발표"
+      - "정비사업 활성화"
+      - "신속통합"
+      - "모아타운"
+      - "규제 철폐"
+      - "조기개통"
+      - "예산 확보"
+      - "구청장 직속"
+      - "민선 8기"
+      - "민선 9기"
+      - "개발 속도전"
+      - "이행률"
+      - "공약 추진"
+
 # 변수 매핑 (피처 엔지니어링용)
 feature_mapping:
   news_freq_gtx:
@@ -154,3 +180,5 @@ feature_mapping:
     - economic_indicators
   news_freq_social:
     - social_issues
+  news_freq_election:
+    - election

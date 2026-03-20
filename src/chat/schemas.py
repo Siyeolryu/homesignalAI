@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from .planner.schemas import PlannerMetadata, QueryIntent
+from .planner.schemas import PlannerMetadata
 
 
 class ChatRequest(BaseModel):

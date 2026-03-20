@@ -71,7 +71,9 @@ class IntentClassifier:
 
             # JSON 파싱
             result = self._parse_response(response)
-            logger.debug(f"Intent classification: {query[:50]}... -> {result.primary_intent}")
+            logger.debug(
+                f"Intent classification: {query[:50]}... -> {result.primary_intent}"
+            )
             return result
 
         except Exception as e:
@@ -90,16 +92,30 @@ class IntentClassifier:
 
         return IntentClassificationResult(
             primary_intent=QueryIntent(data["primary_intent"]),
-            secondary_intents=[QueryIntent(i) for i in data.get("secondary_intents", [])],
+            secondary_intents=[
+                QueryIntent(i) for i in data.get("secondary_intents", [])
+            ],
             confidence=data.get("confidence", 0.8),
         )
 
     def _fallback_classification(self, query: str) -> IntentClassificationResult:
         """AI 분류 실패 시 규칙 기반 폴백"""
-        query_lower = query.lower()
+        query.lower()
 
         # 예측/전망 키워드
-        if any(kw in query for kw in ["예측", "전망", "예상", "앞으로", "향후", "될까", "오를까", "내릴까"]):
+        if any(
+            kw in query
+            for kw in [
+                "예측",
+                "전망",
+                "예상",
+                "앞으로",
+                "향후",
+                "될까",
+                "오를까",
+                "내릴까",
+            ]
+        ):
             return IntentClassificationResult(
                 primary_intent=QueryIntent.FORECAST,
                 secondary_intents=[],
@@ -107,7 +123,9 @@ class IntentClassifier:
             )
 
         # 비교 키워드
-        if any(kw in query for kw in ["비교", "vs", "어디가", "뭐가", "중에서", "보다"]):
+        if any(
+            kw in query for kw in ["비교", "vs", "어디가", "뭐가", "중에서", "보다"]
+        ):
             return IntentClassificationResult(
                 primary_intent=QueryIntent.COMPARISON,
                 secondary_intents=[],
@@ -115,7 +133,10 @@ class IntentClassifier:
             )
 
         # 뉴스/이슈 키워드
-        if any(kw in query for kw in ["GTX", "재개발", "뉴타운", "정책", "규제", "영향", "효과"]):
+        if any(
+            kw in query
+            for kw in ["GTX", "재개발", "뉴타운", "정책", "규제", "영향", "효과"]
+        ):
             return IntentClassificationResult(
                 primary_intent=QueryIntent.NEWS_ANALYSIS,
                 secondary_intents=[],
@@ -139,7 +160,9 @@ class IntentClassifier:
             )
 
         # 투자 키워드
-        if any(kw in query for kw in ["투자", "매수", "매도", "타이밍", "살까", "팔까"]):
+        if any(
+            kw in query for kw in ["투자", "매수", "매도", "타이밍", "살까", "팔까"]
+        ):
             return IntentClassificationResult(
                 primary_intent=QueryIntent.INVESTMENT,
                 secondary_intents=[],

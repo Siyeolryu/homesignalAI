@@ -6,9 +6,9 @@
 - 하이브리드 통합
 """
 
-from .nlp_extractor import NLPKeywordExtractor
 from .ai_extractor import AIKeywordExtractor
 from .hybrid_extractor import HybridKeywordExtractor
+from .nlp_extractor import NLPKeywordExtractor
 
 __all__ = [
     "NLPKeywordExtractor",

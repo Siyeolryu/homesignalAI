@@ -87,7 +87,7 @@ class ModelLoader:
             return None
 
         try:
-            with open(config_path, "r", encoding="utf-8") as f:
+            with open(config_path, encoding="utf-8") as f:
                 config = json.load(f)
             logger.info(f"앙상블 설정 로드 완료: {config_path.name}")
             return config
@@ -113,7 +113,7 @@ class ModelLoader:
 
         for config_file in self.models_dir.glob("ensemble_*_config.json"):
             try:
-                with open(config_file, "r", encoding="utf-8") as f:
+                with open(config_file, encoding="utf-8") as f:
                     config = json.load(f)
 
                 models.append(

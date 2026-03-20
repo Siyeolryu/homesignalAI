@@ -126,8 +126,10 @@ def require_role(allowed_roles: list[RoleType]):
 require_molit_role = require_role(["data_collector_molit", "service_account"])
 require_news_role = require_role(["data_collector_news", "service_account"])
 require_internal_role = require_role(["service_account"])
-require_any_ingest_role = require_role([
-    "data_collector_molit",
-    "data_collector_news",
-    "service_account",
-])
+require_any_ingest_role = require_role(
+    [
+        "data_collector_molit",
+        "data_collector_news",
+        "service_account",
+    ]
+)

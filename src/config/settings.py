@@ -22,6 +22,17 @@ class Settings(BaseSettings):
         str_strip_whitespace=True,  # 문자열 공백 제거
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def strip_all_strings(cls, data: Any) -> Any:
+        """모든 입력 문자열 데이터의 앞뒤 공백(특히 \n)을 제거"""
+        if isinstance(data, dict):
+            return {
+                k: v.strip() if isinstance(v, str) else v
+                for k, v in data.items()
+            }
+        return data
+
     # Supabase
     # CRITICAL: Optional 필드와 기본값 None을 명시하여 환경 변수가 없어도 ValidationError가 발생하지 않게 함
     supabase_url: str | None = None

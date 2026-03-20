@@ -23,7 +23,13 @@ import os
 # So we explicitly check for empty strings and None values
 
 def ensure_env_var(key: str, default: str) -> None:
-    """Ensure environment variable is set with a non-empty value"""
+    """Ensure environment variable is set with a non-empty value and stripped of whitespace"""
+    value = os.environ.get(key)
+    if value:
+        # 이미 설정된 값이 있으면 공백 제거 (특히 \n 대응)
+        os.environ[key] = value.strip()
+    
+    # 다시 가져와서 확인 (strip 된 상태이거나 None)
     value = os.environ.get(key)
     if not value or value.strip() == "":
         os.environ[key] = default
@@ -32,7 +38,20 @@ def ensure_env_var(key: str, default: str) -> None:
 ensure_env_var("SUPABASE_URL", "https://placeholder.supabase.co")
 ensure_env_var("SUPABASE_KEY", "placeholder-key")
 ensure_env_var("SUPABASE_SERVICE_ROLE_KEY", "placeholder-service-key")
-ensure_env_var("APP_ENV", "production")
+
+# Normalize and ensure valid values for Pydantic Literal fields
+app_env = (os.environ.get("APP_ENV") or "production").lower()
+if app_env not in ["development", "staging", "production"]:
+    os.environ["APP_ENV"] = "production"
+else:
+    os.environ["APP_ENV"] = app_env
+
+ai_provider = (os.environ.get("AI_PROVIDER") or "openai").lower()
+if ai_provider not in ["openai", "anthropic"]:
+    os.environ["AI_PROVIDER"] = "openai"
+else:
+    os.environ["AI_PROVIDER"] = ai_provider
+
 ensure_env_var("DEBUG", "false")
 
 # ═══════════════════════════════════════════════════════════════

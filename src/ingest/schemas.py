@@ -9,7 +9,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-
 # =============================================================================
 # Houses Data Schemas (개발1 - 국토교통부 API)
 # =============================================================================
@@ -151,6 +150,7 @@ class NewsSignalStatusResponse(BaseModel):
 class PredictionItem(BaseModel):
     """개별 예측 결과 레코드"""
 
+    region: str = Field(default="동대문구", description="예측 대상 지역")
     model_version: str = Field(..., description="모델 버전 (예: v1.0-prophet-lgbm)")
     target_date: date = Field(..., description="예측 대상 일자")
     predicted_price: float = Field(..., description="예측 가격")

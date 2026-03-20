@@ -2,7 +2,6 @@
 
 import logging
 import re
-from typing import Any
 
 from src.config import settings
 from src.shared.ai_client import AIClient
@@ -15,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class EntityExtractor:
     """질문에서 엔티티(지역, 키워드, 시간 등)를 추출
-    
+
     하이브리드 방식 지원:
     - Stage 1: 단순 매칭 (keywords.yaml)
     - Stage 2: NLP 형태소 분석 (선택)
@@ -52,21 +51,24 @@ class EntityExtractor:
         """
         keyword_config = get_keyword_config()
         self.KEYWORDS = keyword_config.get_all_keywords()
-        
-        self.KEYWORDS.extend([
-            "역세권",
-            "전세",
-            "월세",
-            "매매",
-            "실거래",
-            "호가",
-        ])
-        
+
+        self.KEYWORDS.extend(
+            [
+                "역세권",
+                "전세",
+                "월세",
+                "매매",
+                "실거래",
+                "호가",
+            ]
+        )
+
         # 하이브리드 추출기 초기화 (선택적)
         self.hybrid_extractor = None
         if settings.enable_nlp_extraction or settings.enable_ai_extraction:
             try:
                 from src.chat.extractors import HybridKeywordExtractor
+
                 self.hybrid_extractor = HybridKeywordExtractor(
                     ai_client=ai_client,
                     enable_nlp=settings.enable_nlp_extraction,
@@ -80,8 +82,7 @@ class EntityExtractor:
                 )
             except ImportError as e:
                 logger.warning(
-                    f"하이브리드 추출기 로드 실패: {e}. "
-                    f"단순 매칭만 사용합니다."
+                    f"하이브리드 추출기 로드 실패: {e}. 단순 매칭만 사용합니다."
                 )
             except Exception as e:
                 logger.error(f"하이브리드 추출기 초기화 실패: {e}")
@@ -112,30 +113,30 @@ class EntityExtractor:
 
     async def extract(self, query: str) -> ExtractedEntities:
         """질문에서 엔티티를 추출합니다.
-        
+
         하이브리드 추출기가 활성화된 경우 NLP/AI 기반 추출 사용
         """
         # 기본 추출 (지역, 시간, 부동산 유형)
         regions = self._find_regions(query)
         time_expressions = self._find_time_expressions(query)
         property_types = self._find_property_types(query)
-        
+
         # 키워드 추출 (하이브리드 또는 단순)
         keywords = await self._extract_keywords(query)
-        
+
         return ExtractedEntities(
             regions=regions,
             keywords=keywords,
             time_expressions=time_expressions,
             property_types=property_types,
         )
-    
+
     async def _extract_keywords(self, query: str) -> list[str]:
         """키워드 추출 (하이브리드 또는 단순)
-        
+
         Args:
             query: 사용자 질문
-            
+
         Returns:
             추출된 키워드 목록
         """
@@ -151,7 +152,7 @@ class EntityExtractor:
                 return keywords
             except Exception as e:
                 logger.error(f"하이브리드 추출 실패, 단순 매칭으로 대체: {e}")
-        
+
         # 단순 매칭 (폴백)
         return self._find_keywords(query)
 

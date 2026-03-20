@@ -26,8 +26,11 @@ uv sync --extra crawler
 # Install with NLP dependencies (KoNLPy, Mecab for Korean text processing)
 uv sync --extra nlp
 
-# Run development server
+# Run development server (local)
 uv run uvicorn src.main:app --reload
+
+# Vercel entrypoint (serverless)
+# Uses api/index.py which imports app from src.main
 
 # Run all tests
 uv run pytest
@@ -77,6 +80,15 @@ uv run python scripts/split_train_test_data.py
 uv run python scripts/split_train_test_data.py --region 청량리동 --train-ratio 0.8
 uv run python scripts/validate_data_integrity.py
 uv run python scripts/validate_data_integrity.py --check-rpc
+
+# Database inspection & diagnostics
+uv run python scripts/inspect_db_schema.py
+uv run python scripts/inspect_db_via_api.py
+uv run python scripts/check_supabase.py
+
+# Vercel environment validation
+uv run python scripts/check_vercel_env.py
+uv run python scripts/test_settings_fallback.py
 ```
 
 ## Environment Setup
@@ -151,8 +163,15 @@ CRAWLER_MAX_DELAY=3.0
 - **news/**: News keyword analysis and insights API
 - **crawler/**: Google News crawler with rate limiting, content extraction, keyword extraction (CLI: `uv run python -m src.crawler.cli`)
 - **ingest/**: Data ingestion endpoints with JWT role-based auth (houses, news, predictions)
-- **shared/**: Database client, AI client abstraction, data repository pattern, cache, vector DB, embedding, config loaders
+- **shared/**: Database client, AI client abstraction, data repository pattern, cache, vector DB, embedding, MCP client, config loaders
 - **config/**: Centralized YAML configuration for keywords and rise point detection
+
+### MCP (Model Context Protocol) Integration
+`src/shared/mcp_client.py` provides HTTP SSE-based MCP server integration:
+- **Purpose**: Connect to external MCP servers for tool calling
+- **Usage**: JSON-RPC style tool invocation via `/call` endpoint
+- **Testing**: `scripts/check_mcp_tools.py` for validation
+- **Note**: Optional integration for extending AI capabilities via external tools
 
 ### Ingest API (Data Collection)
 Protected endpoints for data collectors with role-based JWT authentication (`src/ingest/auth.py`):
@@ -161,6 +180,9 @@ Protected endpoints for data collectors with role-based JWT authentication (`src
 - `POST /api/v1/ingest/houses` - 국토교통부 property data (role: `data_collector_molit`)
 - `POST /api/v1/ingest/news` - News signals with optional embedding generation (role: `data_collector_news`)
 - `POST /api/v1/ingest/predictions` - Internal model predictions (role: `service_account`)
+
+**Manual Data Collection Scripts:**
+- `scripts/manual_ingest_election.py` - Example script for manual data ingestion
 
 **Authentication Flow:**
 1. Client sends `Authorization: Bearer <supabase-jwt>`
@@ -343,8 +365,12 @@ Trained models are saved in `models/` directory:
 
 ### Deployment
 - **Platform**: Vercel (serverless)
-- **Backend Integration**: API routes proxy to FastAPI backend
+- **Backend Entrypoint**: `api/index.py` (imports `app` from `src.main`)
+- **Local Development**: `src/main.py` (run directly with uvicorn)
+- **Vercel Configuration**: `vercel.json` with rewrites to `/api/index.py`
 - **Environment**: See `docs/08_Vercel_Architecture_Guide.md`
+
+**Important**: The FastAPI app is defined in `src/main.py` but Vercel serverless functions must be in the `api/` directory. The `api/index.py` file is a thin wrapper that imports and exposes the app.
 
 ### Vercel Deployment Commands
 ```bash
@@ -373,10 +399,12 @@ uv run python scripts/validate_env.py --strict  # production mode
 ### Code Architecture Patterns
 - **Repository Pattern**: All data access goes through `DataRepositoryInterface` in `src/shared/data_repository.py`. Add new queries as interface methods, then implement in both `MockDataRepository` and `SupabaseDataRepository`.
 - **Factory Functions**: Use `@lru_cache` decorated factory functions for singletons (`get_supabase_client()`, `get_data_repository()`, `get_settings()`).
-- **Settings via Pydantic**: All configuration in `src/config/settings.py` using `pydantic-settings` with `.env` file support.
+- **Settings via Pydantic**: All configuration in `src/config/settings.py` using `pydantic-settings` with `.env` file support. Empty strings are converted to `None` to trigger placeholder/mock fallbacks.
 - **Query Planner Agent**: Complex chat queries use a 4-stage pipeline in `src/chat/planner/`: IntentClassifier → QueryDecomposer → PlanGenerator → PlanExecutor.
+- **Async Throughout**: All services use async/await for non-blocking I/O operations.
 
 ### Development Principles
+- **Cursor Rules**: See `.cursor/rules/homesignal-ai-master.mdc` for project-specific AI assistant guidelines
 - Before writing code, verify alignment with `docs/01_PRD_HomeSignalAI.md`
 - **API 계약 준수**: `docs/07_API_Contract_Rules.md`에 정의된 DB/Backend/Frontend 공통 규칙 (SSOT) 반드시 확인
 - Always include data sources in AI responses
@@ -400,6 +428,12 @@ uv run python scripts/validate_env.py --strict  # production mode
 - `tests/test_ml_features.py`: ML feature generation and integration
 - `tests/test_rpc_methods.py`: Database RPC function validation
 - `tests/chat/test_keyword_extraction.py`: Hybrid keyword extraction (KoNLPy + TF-IDF)
+- `tests/crawler/*.py`: Google News crawler components (rate limiter, keyword extractor, runner)
+
+### Test Organization
+- `tests/conftest.py`: Shared fixtures (sample queries, async test setup)
+- `tests/*/conftest.py`: Module-specific fixtures
+- All async tests work automatically via `pytest.ini_options.asyncio_mode = "auto"`
 
 ## Key Documentation
 
@@ -442,7 +476,7 @@ Keywords and rise point parameters change frequently during model tuning. YAML f
 
 ### ✅ Completed
 - FastAPI backend structure with domain-driven design
-- Mock-first development pattern
+- Mock-first development pattern with automatic fallbacks
 - Ingest API with JWT authentication
 - News crawler with rate limiting and keyword extraction
 - Query planner agent (4-stage pipeline)
@@ -454,7 +488,9 @@ Keywords and rise point parameters change frequently during model tuning. YAML f
 - Database RPC functions (시계열 집계, 키워드 빈도 등)
 - Train/Test data split utilities
 - Frontend 다크모드 UI/UX (Next.js 15)
-- Vercel 배포 설정
+- Vercel 배포 설정 및 환경변수 처리 강화
+- Empty string → None validation for Vercel serverless compatibility
+- MCP (Model Context Protocol) client integration
 
 ### 🚧 TODO (Priority Order)
 1. **Real transaction data ingestion** - 국토교통부 API integration
@@ -485,6 +521,14 @@ migrations/005_add_train_test_split.sql
 
 # 6. RPC 메서드 추가 (시계열 집계, 키워드 빈도, 대시보드 요약 등)
 migrations/006_add_rpc_methods.sql
+```
+
+**Migration Execution Scripts:**
+```bash
+# Execute migrations programmatically (if needed)
+uv run python scripts/execute_migration.py
+uv run python scripts/execute_migration_psycopg.py
+uv run python scripts/run_migration.py
 ```
 
 ### Database RPC Functions
@@ -597,3 +641,84 @@ supabase_key
   ```bash
   uv run python scripts/validate_env.py --strict
   ```
+
+## Quick Reference
+
+### Key Files & Directories
+| Path | Purpose |
+|------|---------|
+| `src/main.py` | FastAPI app definition (local development) |
+| `api/index.py` | Vercel serverless entrypoint |
+| `src/config/settings.py` | Centralized configuration with Pydantic |
+| `config/keywords.yaml` | News keyword definitions (8 categories) |
+| `config/rise_point_config.yaml` | Rise point detection parameters |
+| `migrations/*.sql` | Database schema migrations (run in Supabase SQL Editor) |
+| `models/` | Trained ML models (Prophet, LightGBM) |
+| `scripts/` | Utility scripts for data processing and deployment |
+| `tests/` | Test suite with async support |
+| `.cursor/rules/homesignal-ai-master.mdc` | Cursor IDE specific rules |
+
+### Important Constants
+- **Default Regions**: 청량리동, 이문동, 회기동, 휘경동 (Dongdaemun-gu subdistricts)
+- **Embedding Dimensions**: 1536 (OpenAI text-embedding-3-small)
+- **Forecast Periods**: `week` (주간), `month` (월간)
+- **Prophet/LightGBM Ratio**: 60% Prophet + 40% LightGBM
+- **Cache TTL**: Forecast 3600s (1h), Chat 1800s (30m)
+- **News Categories**: transport_gtx, redevelopment, supply, policy, school, environment, finance, event
+
+### Git Workflow
+- **Main branch**: `master` (use for PRs)
+- **Current branch**: `main` (check with `git status`)
+- **Recent focus**: Vercel deployment fixes and ValidationError handling
+
+## Common Troubleshooting
+
+### Local Development Issues
+
+**Issue**: Import errors or module not found
+```bash
+# Solution: Ensure dependencies are installed
+uv sync --extra ml --extra dev --extra crawler --extra nlp
+```
+
+**Issue**: Database connection fails
+```bash
+# Solution: Check if Supabase credentials are set, or use mock mode
+# For mock mode, set SUPABASE_URL to any string containing "placeholder"
+export SUPABASE_URL="placeholder"
+```
+
+**Issue**: API timeout errors
+```bash
+# Solution: Increase timeout in .env
+SUPABASE_TIMEOUT=30
+AI_API_TIMEOUT=60.0
+```
+
+### Testing Issues
+
+**Issue**: Async tests not running
+```bash
+# Solution: Ensure pytest-asyncio is installed and asyncio_mode is set
+uv sync --extra test
+# Check pyproject.toml has: asyncio_mode = "auto"
+```
+
+**Issue**: Test data missing
+```bash
+# Solution: Check conftest.py fixtures are loading correctly
+uv run pytest tests/conftest.py -v
+```
+
+### Vercel Deployment Issues
+
+**See**: Vercel Deployment Troubleshooting section above for ValidationError and environment variable issues.
+
+**Additional checks**:
+```bash
+# Test Vercel environment locally
+uv run python scripts/check_vercel_env.py
+
+# Test settings fallback logic
+uv run python scripts/test_settings_fallback.py
+```

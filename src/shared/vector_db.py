@@ -1,6 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Any
 
 from supabase import Client
 
@@ -16,7 +17,7 @@ class DocumentChunk:
     content: str
     source: str
     score: float
-    metadata: dict | None = None
+    metadata: dict[str, Any] | None = None
 
 
 class VectorDBInterface(ABC):
@@ -27,7 +28,7 @@ class VectorDBInterface(ABC):
         self,
         query: str,
         top_k: int = 5,
-        filters: dict | None = None,
+        filters: dict[str, Any] | None = None,
     ) -> list[DocumentChunk]:
         """유사도 검색"""
         pass
@@ -35,7 +36,7 @@ class VectorDBInterface(ABC):
     @abstractmethod
     async def upsert(
         self,
-        documents: list[dict],
+        documents: list[dict[str, Any]],
         embeddings: list[list[float]],
     ) -> bool:
         """문서 임베딩 저장"""
@@ -49,7 +50,7 @@ class MockVectorDB(VectorDBInterface):
         self,
         query: str,
         top_k: int = 5,
-        filters: dict | None = None,
+        filters: dict[str, Any] | None = None,
     ) -> list[DocumentChunk]:
         # TODO: 실제 Vector DB 연동 시 교체
         return [
@@ -67,7 +68,7 @@ class MockVectorDB(VectorDBInterface):
 
     async def upsert(
         self,
-        documents: list[dict],
+        documents: list[dict[str, Any]],
         embeddings: list[list[float]],
     ) -> bool:
         return True
@@ -83,8 +84,8 @@ class SupabaseVectorDB(VectorDBInterface):
     def __init__(
         self,
         client: Client | None = None,
-        embedding_service=None,
-    ):
+        embedding_service: Any = None,
+    ) -> None:
         """
         Args:
             client: Supabase 클라이언트 (None이면 지연 초기화)
@@ -102,7 +103,7 @@ class SupabaseVectorDB(VectorDBInterface):
             self._client = get_supabase_client(use_service_role=True)
         return self._client
 
-    def _get_embedding_service(self):
+    def _get_embedding_service(self) -> Any:
         """임베딩 서비스 지연 초기화"""
         if self._embedding_service is None:
             from src.shared.embedding import get_embedding_service
@@ -114,7 +115,7 @@ class SupabaseVectorDB(VectorDBInterface):
         self,
         query: str,
         top_k: int = 5,
-        filters: dict | None = None,
+        filters: dict[str, Any] | None = None,
     ) -> list[DocumentChunk]:
         """pgvector 코사인 유사도 검색
 
@@ -179,7 +180,9 @@ class SupabaseVectorDB(VectorDBInterface):
                     )
                 )
 
-            logger.info(f"Vector 검색 완료: query='{query[:30]}...', results={len(chunks)}")
+            logger.info(
+                f"Vector 검색 완료: query='{query[:30]}...', results={len(chunks)}"
+            )
             return chunks
 
         except Exception as e:
@@ -189,7 +192,7 @@ class SupabaseVectorDB(VectorDBInterface):
 
     async def upsert(
         self,
-        documents: list[dict],
+        documents: list[dict[str, Any]],
         embeddings: list[list[float]],
     ) -> bool:
         """문서와 임베딩을 news_signals 테이블에 저장
@@ -247,7 +250,7 @@ class SupabaseVectorDB(VectorDBInterface):
             return False
 
     @staticmethod
-    def _format_source(row: dict) -> str:
+    def _format_source(row: dict[str, Any]) -> str:
         """출처 문자열 포맷팅"""
         title = row.get("title", "알 수 없음")[:50]
         published_at = row.get("published_at", "")

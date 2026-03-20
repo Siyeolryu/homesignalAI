@@ -7,8 +7,6 @@ import redis.asyncio as redis
 
 from src.config import settings
 
-from .exceptions import CacheError
-
 logger = logging.getLogger(__name__)
 
 
@@ -59,10 +57,23 @@ class CacheClient:
 _cache_client: CacheClient | None = None
 
 
-async def get_cache_client() -> CacheClient:
-    """캐시 클라이언트 싱글톤 반환"""
-    global _cache_client
-    if _cache_client is None:
-        redis_client = redis.from_url(settings.redis_url)
-        _cache_client = CacheClient(redis_client)
+_redis_check_done = False
+
+
+async def get_cache_client() -> CacheClient | None:
+    """캐시 클라이언트 싱글톤 반환 (Redis 연결 실패 시 None)"""
+    global _cache_client, _redis_check_done
+
+    if not _redis_check_done:
+        _redis_check_done = True
+        try:
+            redis_client = redis.from_url(settings.redis_url)
+            # Test connection with short timeout
+            await redis_client.ping()
+            _cache_client = CacheClient(redis_client)
+            logger.info("Redis 캐시 클라이언트 연결 성공")
+        except Exception as e:
+            logger.warning(f"Redis 연결 실패, 캐시 비활성화: {e}")
+            _cache_client = None
+
     return _cache_client

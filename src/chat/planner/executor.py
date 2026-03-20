@@ -89,7 +89,9 @@ class PlanExecutor:
 
             # 독립 단계 병렬 실행
             if independent_steps:
-                tasks = [self._execute_step(step, step_data) for step in independent_steps]
+                tasks = [
+                    self._execute_step(step, step_data) for step in independent_steps
+                ]
                 step_results = await asyncio.gather(*tasks)
                 result.step_results.extend(step_results)
                 for sr in step_results:
@@ -157,8 +159,7 @@ class PlanExecutor:
             "trend": forecast.trend,
             "confidence": forecast.confidence,
             "forecast": [
-                {"date": str(p.date), "value": p.value}
-                for p in forecast.forecast
+                {"date": str(p.date), "value": p.value} for p in forecast.forecast
             ],
         }
 
@@ -205,7 +206,8 @@ class PlanExecutor:
         if agg_type == "comparison":
             # 예측 데이터 비교 집계
             forecasts = [
-                v for v in previous_data.values()
+                v
+                for v in previous_data.values()
                 if isinstance(v, dict) and "trend" in v
             ]
             return {

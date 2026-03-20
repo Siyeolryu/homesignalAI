@@ -32,8 +32,10 @@ class KeywordConfig:
 
     def __init__(self, config_path: str | Path | None = None):
         if config_path is None:
-            config_path = Path(__file__).parent.parent.parent / "config" / "keywords.yaml"
-        
+            config_path = (
+                Path(__file__).parent.parent.parent / "config" / "keywords.yaml"
+            )
+
         self.config_path = Path(config_path)
         self._config: dict[str, Any] = {}
         self._categories: dict[str, KeywordCategory] = {}
@@ -47,9 +49,9 @@ class KeywordConfig:
             return
 
         try:
-            with open(self.config_path, "r", encoding="utf-8") as f:
+            with open(self.config_path, encoding="utf-8") as f:
                 self._config = yaml.safe_load(f)
-            
+
             categories_data = self._config.get("categories", {})
             for name, data in categories_data.items():
                 self._categories[name] = KeywordCategory(
@@ -57,9 +59,9 @@ class KeywordConfig:
                     primary=data.get("primary", []),
                     synonyms=data.get("synonyms", []),
                 )
-            
+
             logger.info(f"키워드 설정 로드 완료: {len(self._categories)}개 카테고리")
-        
+
         except Exception as e:
             logger.error(f"키워드 설정 로드 실패: {e}")
             self._use_defaults()
@@ -99,14 +101,14 @@ class KeywordConfig:
 
     def get_primary_keywords(self, category: str | None = None) -> list[str]:
         """primary 키워드 목록 반환
-        
+
         Args:
             category: 특정 카테고리만 조회 (None이면 전체)
         """
         if category:
             cat = self._categories.get(category)
             return cat.primary if cat else []
-        
+
         keywords = []
         for cat in self._categories.values():
             keywords.extend(cat.primary)
@@ -114,14 +116,14 @@ class KeywordConfig:
 
     def get_all_keywords(self, category: str | None = None) -> list[str]:
         """primary + synonyms 전체 키워드 반환
-        
+
         Args:
             category: 특정 카테고리만 조회 (None이면 전체)
         """
         if category:
             cat = self._categories.get(category)
             return cat.all_keywords() if cat else []
-        
+
         keywords = []
         for cat in self._categories.values():
             keywords.extend(cat.all_keywords())
@@ -129,7 +131,7 @@ class KeywordConfig:
 
     def get_feature_mapping(self) -> dict[str, list[str]]:
         """피처 변수 매핑 반환
-        
+
         Returns:
             {feature_name: [category_names]}
         """
@@ -137,20 +139,20 @@ class KeywordConfig:
 
     def get_keywords_for_feature(self, feature_name: str) -> list[str]:
         """특정 피처 변수에 해당하는 키워드 반환
-        
+
         Args:
             feature_name: 피처 변수명 (예: news_freq_gtx)
-        
+
         Returns:
             해당 피처에 매핑된 카테고리들의 전체 키워드
         """
         mapping = self.get_feature_mapping()
         categories = mapping.get(feature_name, [])
-        
+
         keywords = []
         for cat_name in categories:
             keywords.extend(self.get_all_keywords(cat_name))
-        
+
         return keywords
 
 

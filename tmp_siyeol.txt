@@ -1,0 +1,9 @@
+﻿2ddb27d docs: Vercel 환경변수 설정 가이드 및 자동화 스크립트 추가
+9588bd7 fix: Vercel FastAPI entrypoint - 공식 문서 방식 적용
+01fb414 fix: Vercel FastAPI entrypoint 및 환경변수 오류 수정
+d77afaf feat: ML 통합 Feature 테이블 및 Prophet+LightGBM 앙상블 구현
+6192656 feat: 프론트엔드 디자인 시스템 구현 (다크모드 UI/UX)
+c16b0b0 feat: 사용자 질문 키워드 추출 고도화 (하이브리드 방식)
+6caa680 feat: 뉴스 크롤링 키워드 대폭 확장 (4→8 카테고리, 28→95개)
+1f490bf feat: Vercel 배포 설정 및 Next.js 프론트엔드 구현
+6bd7c5a feat: HomeSignal AI 초기 구현 완료 (2026-03-02 ~ 03-06)

@@ -1,7 +1,7 @@
 """Google News RSS 크롤러"""
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from email.utils import parsedate_to_datetime
 from urllib.parse import quote_plus
 from xml.etree import ElementTree
@@ -100,7 +100,9 @@ class GoogleNewsCrawler:
                 response = await client.get(url)
 
                 if response.status_code == 429:
-                    logger.warning(f"Rate limit hit, backing off (attempt {attempt + 1})")
+                    logger.warning(
+                        f"Rate limit hit, backing off (attempt {attempt + 1})"
+                    )
                     await self.rate_limiter.backoff(attempt)
                     continue
 
@@ -123,7 +125,9 @@ class GoogleNewsCrawler:
                 if attempt < self._max_retries - 1:
                     await self.rate_limiter.backoff(attempt)
                     continue
-                raise NetworkError(f"Request failed after {self._max_retries} retries: {e}")
+                raise NetworkError(
+                    f"Request failed after {self._max_retries} retries: {e}"
+                )
 
         return []
 
@@ -140,7 +144,7 @@ class GoogleNewsCrawler:
             raise ParseError(f"RSS XML parsing failed: {e}")
 
         items: list[CrawledNewsItem] = []
-        cutoff_date = datetime.now(timezone.utc) - timedelta(days=date_range_days)
+        cutoff_date = datetime.now(UTC) - timedelta(days=date_range_days)
 
         for item in root.findall(".//item"):
             if len(items) >= max_results:
@@ -195,7 +199,7 @@ class GoogleNewsCrawler:
             return parsedate_to_datetime(date_str)
         except (TypeError, ValueError):
             # 파싱 실패 시 현재 시간 반환
-            return datetime.now(timezone.utc)
+            return datetime.now(UTC)
 
     @staticmethod
     def _extract_actual_url(google_news_url: str) -> str:

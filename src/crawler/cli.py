@@ -5,7 +5,7 @@ import asyncio
 import logging
 import sys
 
-from .runner import CrawlerRunner, create_crawler_runner
+from .runner import create_crawler_runner
 from .schemas import CrawlConfig
 
 # 로깅 설정

@@ -29,7 +29,9 @@ class KeywordExtractor:
             keywords_path: keywords.yaml 파일 경로 (None이면 기본 경로)
             custom_keywords: 추가 커스텀 키워드
         """
-        self._keywords_path = Path(keywords_path) if keywords_path else DEFAULT_KEYWORDS_PATH
+        self._keywords_path = (
+            Path(keywords_path) if keywords_path else DEFAULT_KEYWORDS_PATH
+        )
         self._keywords: set[str] = set()
         self._categories: dict[str, list[str]] = {}
 

@@ -31,13 +31,17 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """앱 시작/종료 시 실행되는 로직"""
     logger.info(f"HomeSignal AI 시작 (환경: {settings.app_env})")
-    
+
     # 설정 검증 결과 로그 루틴
     if "placeholder" in settings.supabase_url:
-        logger.warning("WARNING: Supabase URL is still using placeholder. Check Vercel environment variables.")
+        logger.warning(
+            "WARNING: Supabase URL is still using placeholder. Check Vercel environment variables."
+        )
     if settings.supabase_key == "placeholder-key":
-        logger.warning("WARNING: Supabase Key is still using placeholder. Check Vercel environment variables.")
-        
+        logger.warning(
+            "WARNING: Supabase Key is still using placeholder. Check Vercel environment variables."
+        )
+
     yield
     logger.info("HomeSignal AI 종료")
 
@@ -75,7 +79,7 @@ app.add_middleware(
 @app.exception_handler(HomeSignalError)
 async def homesignal_exception_handler(request: Request, exc: HomeSignalError):
     """HomeSignal 커스텀 예외 핸들러
-    
+
     표준 에러 응답 포맷:
     {
         "error": {
@@ -84,7 +88,7 @@ async def homesignal_exception_handler(request: Request, exc: HomeSignalError):
             "details": {}
         }
     }
-    
+
     참조: docs/07_API_Contract_Rules.md
     """
     from src.shared.exceptions import (
@@ -157,8 +161,11 @@ app.include_router(ingest_router, prefix="/api/v1")
 @app.get("/health", tags=["health"])
 async def health_check():
     """헬스체크 엔드포인트 - 설정 유효성 포함"""
-    config_ok = "placeholder" not in settings.supabase_url and settings.supabase_key != "placeholder-key"
-    
+    config_ok = (
+        "placeholder" not in settings.supabase_url
+        and settings.supabase_key != "placeholder-key"
+    )
+
     return {
         "status": "healthy" if config_ok else "degraded",
         "configuration": "OK" if config_ok else "Missing Supabase Credentials",

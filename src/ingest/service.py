@@ -8,11 +8,10 @@ import logging
 import uuid
 from datetime import datetime
 
-from supabase import Client
+from supabase import AsyncClient
 
-from src.shared.database import get_supabase_client
+from src.shared.database import get_async_supabase_client
 from src.shared.embedding import EmbeddingService, get_embedding_service
-from src.shared.exceptions import DatabaseError
 
 from .schemas import (
     HouseDataBatchRequest,
@@ -33,11 +32,11 @@ class IngestService:
 
     def __init__(
         self,
-        db: Client | None = None,
+        db: AsyncClient | None = None,
         embedding_service: EmbeddingService | None = None,
     ):
         # Ingest는 INSERT/UPDATE가 필요하므로 service_role 키 사용
-        self.db = db or get_supabase_client(use_service_role=True)
+        self.db = db or get_async_supabase_client(use_service_role=True)
         self.embedding_service = embedding_service or get_embedding_service()
 
     # =========================================================================
@@ -86,7 +85,7 @@ class IngestService:
                 }
 
                 # Supabase에 삽입
-                self.db.table("houses_data").insert(record).execute()
+                await self.db.table("houses_data").insert(record).execute()
                 inserted_count += 1
 
             except Exception as e:
@@ -112,15 +111,13 @@ class IngestService:
         """부동산 데이터 현황 조회"""
         try:
             # 총 레코드 수
-            count_result = (
-                self.db.table("houses_data")
-                .select("id", count="exact")
-                .execute()
+            count_result = await (
+                self.db.table("houses_data").select("id", count="exact").execute()
             )
             total_records = count_result.count or 0
 
             # 계약일 범위
-            date_result = (
+            date_result = await (
                 self.db.table("houses_data")
                 .select("contract_date")
                 .order("contract_date", desc=False)
@@ -128,12 +125,10 @@ class IngestService:
                 .execute()
             )
             oldest_date = (
-                date_result.data[0]["contract_date"][:10]
-                if date_result.data
-                else None
+                date_result.data[0]["contract_date"][:10] if date_result.data else None
             )
 
-            latest_result = (
+            latest_result = await (
                 self.db.table("houses_data")
                 .select("contract_date")
                 .order("contract_date", desc=True)
@@ -198,7 +193,7 @@ class IngestService:
             try:
                 # URL 기준 중복 체크
                 if item.url:
-                    existing = (
+                    existing = await (
                         self.db.table("news_signals")
                         .select("id")
                         .eq("url", item.url)
@@ -212,9 +207,11 @@ class IngestService:
                 embedding = item.embedding
                 if embedding is None and request.generate_embeddings:
                     try:
-                        embedding = await self.embedding_service.generate_embedding_for_news(
-                            title=item.title,
-                            content=item.content,
+                        embedding = (
+                            await self.embedding_service.generate_embedding_for_news(
+                                title=item.title,
+                                content=item.content,
+                            )
                         )
                         embedding_generated_count += 1
                     except Exception as e:
@@ -232,7 +229,7 @@ class IngestService:
                 }
 
                 # Supabase에 삽입
-                self.db.table("news_signals").insert(record).execute()
+                await self.db.table("news_signals").insert(record).execute()
                 inserted_count += 1
 
             except Exception as e:
@@ -261,10 +258,8 @@ class IngestService:
         """뉴스 데이터 현황 조회"""
         try:
             # 총 레코드 수
-            count_result = (
-                self.db.table("news_signals")
-                .select("id", count="exact")
-                .execute()
+            count_result = await (
+                self.db.table("news_signals").select("id", count="exact").execute()
             )
             total_records = count_result.count or 0
 
@@ -272,7 +267,7 @@ class IngestService:
             with_embedding_count = 0
 
             # 최근 발행일
-            latest_result = (
+            latest_result = await (
                 self.db.table("news_signals")
                 .select("published_at")
                 .order("published_at", desc=True)
@@ -280,9 +275,7 @@ class IngestService:
                 .execute()
             )
             latest_published = (
-                latest_result.data[0]["published_at"]
-                if latest_result.data
-                else None
+                latest_result.data[0]["published_at"] if latest_result.data else None
             )
 
             # 키워드 빈도 (간단히 빈 딕셔너리 반환)
@@ -325,6 +318,7 @@ class IngestService:
         for item in request.items:
             try:
                 record = {
+                    "region": item.region,
                     "model_version": item.model_version,
                     "target_date": item.target_date.isoformat(),
                     "predicted_price": item.predicted_price,
@@ -332,7 +326,7 @@ class IngestService:
                     "features_used": item.features_used,
                 }
 
-                self.db.table("ai_predictions").insert(record).execute()
+                await self.db.table("ai_predictions").insert(record).execute()
                 inserted_count += 1
 
             except Exception as e:

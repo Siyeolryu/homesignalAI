@@ -6,7 +6,6 @@ from urllib.parse import urlparse
 
 import httpx
 
-from .exceptions import ContentExtractionError, NetworkError
 from .rate_limiter import RateLimiter
 
 logger = logging.getLogger(__name__)
@@ -91,7 +90,9 @@ class ContentExtractor:
             max_content_length: 추출 본문 최대 길이
         """
         if not BS4_AVAILABLE:
-            logger.warning("BeautifulSoup not available. Install with: uv sync --extra crawler")
+            logger.warning(
+                "BeautifulSoup not available. Install with: uv sync --extra crawler"
+            )
 
         self.rate_limiter = rate_limiter
         self._client = http_client
@@ -156,7 +157,9 @@ class ContentExtractor:
         soup = BeautifulSoup(html, "html.parser")
 
         # 불필요한 요소 제거
-        for tag in soup.find_all(["script", "style", "nav", "header", "footer", "aside"]):
+        for tag in soup.find_all(
+            ["script", "style", "nav", "header", "footer", "aside"]
+        ):
             tag.decompose()
 
         # 도메인 추출

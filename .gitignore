@@ -91,3 +91,5 @@ unnamed*
 # Cursor/Claude
 .cursor/
 .claude/
+
+.vercel

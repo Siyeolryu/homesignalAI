@@ -43,7 +43,7 @@ JSON 형식으로 반환:
 
 class AIKeywordExtractor:
     """AI 기반 키워드 추출기
-    
+
     GPT/Claude를 사용하여 사용자 질문의 맥락을 이해하고
     핵심 키워드를 추출합니다.
     """
@@ -56,16 +56,16 @@ class AIKeywordExtractor:
         self.ai_client = ai_client
 
     async def extract(
-        self, 
+        self,
         query: str,
         min_confidence: float = 0.5,
     ) -> dict[str, Any]:
         """AI 기반 키워드 추출
-        
+
         Args:
             query: 사용자 질문
             min_confidence: 최소 신뢰도 (이하면 빈 결과 반환)
-            
+
         Returns:
             {
                 "keywords": [...],
@@ -76,16 +76,16 @@ class AIKeywordExtractor:
         """
         try:
             prompt = KEYWORD_EXTRACTION_PROMPT.format(query=query)
-            
+
             response = await self.ai_client.generate(
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.3,  # 일관성을 위해 낮은 temperature
                 max_tokens=500,
             )
-            
+
             # JSON 파싱
             result = self._parse_response(response)
-            
+
             # 신뢰도 체크
             confidence = result.get("confidence", 0.0)
             if confidence < min_confidence:
@@ -98,13 +98,13 @@ class AIKeywordExtractor:
                     "intent": "general",
                     "confidence": confidence,
                 }
-            
+
             logger.info(
                 f"AI 키워드 추출 완료: {len(result['keywords'])}개 "
                 f"(신뢰도: {confidence:.2f})"
             )
             return result
-            
+
         except AIAPIError as e:
             logger.error(f"AI API 오류: {e}")
             return self._empty_result()
@@ -114,31 +114,31 @@ class AIKeywordExtractor:
 
     def _parse_response(self, response: str) -> dict[str, Any]:
         """AI 응답 파싱
-        
+
         Args:
             response: AI 응답 텍스트
-            
+
         Returns:
             파싱된 결과 딕셔너리
         """
         try:
             # JSON 블록 추출 (```json ... ``` 또는 {...})
             import re
-            
+
             # 코드 블록에서 추출
-            json_match = re.search(r'```json\s*(\{.*?\})\s*```', response, re.DOTALL)
+            json_match = re.search(r"```json\s*(\{.*?\})\s*```", response, re.DOTALL)
             if json_match:
                 json_str = json_match.group(1)
             else:
                 # 직접 JSON 찾기
-                json_match = re.search(r'\{.*\}', response, re.DOTALL)
+                json_match = re.search(r"\{.*\}", response, re.DOTALL)
                 if json_match:
                     json_str = json_match.group(0)
                 else:
                     raise ValueError("JSON 형식을 찾을 수 없습니다")
-            
+
             result = json.loads(json_str)
-            
+
             # 필수 필드 검증
             if "keywords" not in result:
                 result["keywords"] = []
@@ -148,9 +148,9 @@ class AIKeywordExtractor:
                 result["intent"] = "general"
             if "confidence" not in result:
                 result["confidence"] = 0.8  # 기본값
-            
+
             return result
-            
+
         except json.JSONDecodeError as e:
             logger.error(f"JSON 파싱 실패: {e}")
             logger.debug(f"응답 내용: {response[:200]}")
@@ -170,10 +170,10 @@ class AIKeywordExtractor:
 
     async def extract_keywords_only(self, query: str) -> list[str]:
         """키워드만 추출 (간단한 인터페이스)
-        
+
         Args:
             query: 사용자 질문
-            
+
         Returns:
             추출된 키워드 목록
         """

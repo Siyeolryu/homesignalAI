@@ -126,7 +126,9 @@ class PlanGenerator:
                     step_id=0,
                     action="vector_search",
                     params={
-                        "query": " ".join(keywords) if keywords else sub_queries[0].query_text,
+                        "query": " ".join(keywords)
+                        if keywords
+                        else sub_queries[0].query_text,
                         "top_k": 5,
                         "keywords": keywords,
                     },
@@ -137,7 +139,9 @@ class PlanGenerator:
             for i, step in enumerate(steps):
                 step.step_id = i
                 if step.depends_on:
-                    step.depends_on = [d + 1 for d in step.depends_on if d < len(steps) - 1]
+                    step.depends_on = [
+                        d + 1 for d in step.depends_on if d < len(steps) - 1
+                    ]
 
         return steps
 

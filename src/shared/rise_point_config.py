@@ -37,7 +37,7 @@ class RisePointConfigLoader:
             return
 
         try:
-            with open(self.config_path, "r", encoding="utf-8") as f:
+            with open(self.config_path, encoding="utf-8") as f:
                 self._config = yaml.safe_load(f)
             logger.info(f"상승 시점 설정 로드 완료: {self.config_path}")
         except Exception as e:

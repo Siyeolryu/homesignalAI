@@ -1,12 +1,12 @@
 """Query Planner 스키마 정의"""
 
-from enum import Enum
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
 
-class QueryIntent(str, Enum):
+class QueryIntent(StrEnum):
     """질문 의도 분류"""
 
     PRICE_INQUIRY = "price_inquiry"  # 현재/과거 시세 조회

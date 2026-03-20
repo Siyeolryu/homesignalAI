@@ -2,7 +2,6 @@ import logging
 from datetime import date, timedelta
 
 # import pandas as pd (Moved to individual methods to avoid ImportError on Vercel)
-
 from src.config import settings
 from src.forecast.rise_point_detector import RisePointDetector
 from src.shared.cache import CacheClient
@@ -92,7 +91,7 @@ class ForecastService:
     async def _run_forecast(self, request: ForecastRequest) -> list[ForecastPoint]:
         """
         시계열 예측 모델 실행
-        
+
         use_real_model=True: Prophet + LightGBM 앙상블 사용
         use_real_model=False: Mock 데이터 반환
         """
@@ -133,12 +132,16 @@ class ForecastService:
 
             # 3. 미래 날짜 생성
             last_date = latest_features["period_date"].max()
-            delta = timedelta(weeks=1) if request.period == "week" else timedelta(days=30)
-            future_dates = [last_date + (delta * i) for i in range(1, request.horizon + 1)]
+            delta = (
+                timedelta(weeks=1) if request.period == "week" else timedelta(days=30)
+            )
+            future_dates = [
+                last_date + (delta * i) for i in range(1, request.horizon + 1)
+            ]
 
             # 4. Prophet 예측
             prophet_future = pd.DataFrame({"ds": future_dates})
-            
+
             # Regressor 추가 (최신 값 사용 또는 평균)
             for regressor in prophet_model.extra_regressors.keys():
                 if regressor in latest_features.columns:
@@ -174,8 +177,12 @@ class ForecastService:
                     ForecastPoint(
                         date=future_date,
                         value=round(float(ensemble_pred[i]), 2),
-                        lower_bound=round(float(prophet_pred["yhat_lower"].values[i]), 2),
-                        upper_bound=round(float(prophet_pred["yhat_upper"].values[i]), 2),
+                        lower_bound=round(
+                            float(prophet_pred["yhat_lower"].values[i]), 2
+                        ),
+                        upper_bound=round(
+                            float(prophet_pred["yhat_upper"].values[i]), 2
+                        ),
                     )
                 )
 
@@ -215,7 +222,9 @@ class ForecastService:
         try:
             import pandas as pd
         except ImportError:
-            logger.error("Pandas를 로드할 수 없습니다. Feature 조회 결과를 DataFrame으로 변환할 수 없습니다.")
+            logger.error(
+                "Pandas를 로드할 수 없습니다. Feature 조회 결과를 DataFrame으로 변환할 수 없습니다."
+            )
             # fallback or return empty dict if needed, but here we expect DataFrame
             raise ImportError("Pandas required for this method")
 
@@ -245,11 +254,11 @@ class ForecastService:
         상승 시점 전후 윈도우 내 뉴스 키워드 빈도를 조회하여 피처 변수로 활용
         """
         keyword_config = get_keyword_config()
-        
+
         keywords = keyword_config.get_primary_keywords()
 
         rise_point_windows = await self._get_rise_point_windows(region)
-        
+
         keyword_frequencies = await self.data_repo.get_news_keyword_frequency(
             keywords=keywords,
             rise_point_windows=rise_point_windows if rise_point_windows else None,
@@ -264,9 +273,7 @@ class ForecastService:
             for kf in keyword_frequencies
         ]
 
-    async def _get_rise_point_windows(
-        self, region: str
-    ) -> list[tuple[date, date]]:
+    async def _get_rise_point_windows(self, region: str) -> list[tuple[date, date]]:
         """상승 시점 윈도우 조회"""
         try:
             time_series = await self.data_repo.get_houses_time_series(
@@ -294,9 +301,7 @@ class ForecastService:
             logger.error(f"상승 시점 윈도우 조회 실패: {e}")
             return []
 
-    def _calculate_trend(
-        self, forecast: list[ForecastPoint]
-    ) -> str:
+    def _calculate_trend(self, forecast: list[ForecastPoint]) -> str:
         """예측 트렌드 판단"""
         if len(forecast) < 2:
             return "보합"

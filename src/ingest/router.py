@@ -55,7 +55,9 @@ async def ingest_houses(
     request: HouseDataBatchRequest,
     user: UserRole = Depends(require_molit_role),
 ) -> HouseDataBatchResponse:
-    logger.info(f"부동산 데이터 적재 요청: user={user.user_id}, items={len(request.items)}")
+    logger.info(
+        f"부동산 데이터 적재 요청: user={user.user_id}, items={len(request.items)}"
+    )
     service = IngestService()
     return await service.ingest_houses(request)
 

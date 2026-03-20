@@ -1,5 +1,4 @@
 import logging
-from typing import Any
 
 import anthropic
 import httpx
@@ -48,14 +47,72 @@ class AIClient:
         try:
             if self.provider == "openai":
                 return await self._generate_openai(
-                    system_prompt, user_message, model or "gpt-4o", temperature, max_tokens
+                    system_prompt,
+                    user_message,
+                    model or "gpt-4o",
+                    temperature,
+                    max_tokens,
                 )
             else:
                 return await self._generate_anthropic(
-                    system_prompt, user_message, model or "claude-3-5-sonnet-20241022", temperature, max_tokens
+                    system_prompt,
+                    user_message,
+                    model or "claude-3-5-sonnet-20241022",
+                    temperature,
+                    max_tokens,
                 )
         except Exception as e:
             logger.error(f"AI API 호출 실패 ({self.provider}): {e}")
+            raise AIAPIError(
+                message="AI 응답 생성에 실패했습니다.",
+                details={"provider": self.provider, "error": str(e)},
+            )
+
+    async def generate_with_history(
+        self,
+        system_prompt: str,
+        conversation_history: list[dict[str, str]],
+        user_message: str,
+        model: str | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
+    ) -> str:
+        """
+        대화 히스토리를 포함한 AI 응답 생성
+
+        Args:
+            system_prompt: 시스템 프롬프트
+            conversation_history: 이전 대화 메시지 리스트
+                [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
+            user_message: 현재 사용자 메시지
+            model: 사용할 모델 (선택사항)
+            temperature: 온도 (기본값: 0.7)
+            max_tokens: 최대 토큰 수 (기본값: 2048)
+
+        Returns:
+            str: AI 생성 응답
+        """
+        try:
+            if self.provider == "openai":
+                return await self._generate_openai_with_history(
+                    system_prompt,
+                    conversation_history,
+                    user_message,
+                    model or "gpt-4o",
+                    temperature,
+                    max_tokens,
+                )
+            else:
+                return await self._generate_anthropic_with_history(
+                    system_prompt,
+                    conversation_history,
+                    user_message,
+                    model or "claude-3-5-sonnet-20241022",
+                    temperature,
+                    max_tokens,
+                )
+        except Exception as e:
+            logger.error(f"AI API 호출 실패 (대화형, {self.provider}): {e}")
             raise AIAPIError(
                 message="AI 응답 생성에 실패했습니다.",
                 details={"provider": self.provider, "error": str(e)},
@@ -94,6 +151,60 @@ class AIClient:
             model=model,
             system=system_prompt,
             messages=[{"role": "user", "content": user_message}],
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        return response.content[0].text
+
+    async def _generate_openai_with_history(
+        self,
+        system_prompt: str,
+        conversation_history: list[dict[str, str]],
+        user_message: str,
+        model: str,
+        temperature: float,
+        max_tokens: int,
+    ) -> str:
+        """OpenAI 대화 히스토리 포함 응답 생성"""
+        client = self._get_openai_client()
+
+        # 메시지 구성: system + 이전 대화 + 현재 메시지
+        messages = [{"role": "system", "content": system_prompt}]
+        messages.extend(conversation_history)
+        messages.append({"role": "user", "content": user_message})
+
+        logger.info(f"OpenAI API 호출: {len(messages)}개 메시지 (히스토리 포함)")
+
+        response = await client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        return response.choices[0].message.content or ""
+
+    async def _generate_anthropic_with_history(
+        self,
+        system_prompt: str,
+        conversation_history: list[dict[str, str]],
+        user_message: str,
+        model: str,
+        temperature: float,
+        max_tokens: int,
+    ) -> str:
+        """Anthropic 대화 히스토리 포함 응답 생성"""
+        client = self._get_anthropic_client()
+
+        # 메시지 구성: 이전 대화 + 현재 메시지
+        messages = list(conversation_history)
+        messages.append({"role": "user", "content": user_message})
+
+        logger.info(f"Anthropic API 호출: {len(messages)}개 메시지 (히스토리 포함)")
+
+        response = await client.messages.create(
+            model=model,
+            system=system_prompt,
+            messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,
         )
