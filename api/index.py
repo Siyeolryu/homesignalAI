@@ -86,10 +86,14 @@ print("[Vercel]")
 # ═══════════════════════════════════════════════════════════════
 # STEP 4: Import FastAPI App (Safe now that env vars are set)
 # ═══════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
+# STEP 4: Import FastAPI App (Safe now that env vars are set)
+# ═══════════════════════════════════════════════════════════════
 
 try:
     print("[Vercel] Loading FastAPI app from src.main...")
-    from src.main import app
+    from src.main import app as main_app
+    app = main_app # Literal assignment for Vercel scanner
 
     print("[Vercel] ✅ SUCCESS: FastAPI app loaded")
     print(f"[Vercel]   - App title: {app.title}")
@@ -180,4 +184,5 @@ print("[Vercel] ✅ Vercel serverless function ready")
 print("[Vercel] ═══════════════════════════════════════════════════════")
 
 # CRITICAL: Module must export 'app' for Vercel
+# Using explicit assignment for scanner discovery
 __all__ = ["app"]
