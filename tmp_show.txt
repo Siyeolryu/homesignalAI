@@ -1,0 +1,48 @@
+﻿commit 2cd8266628cca25534ea8a44dc67964feb873aed
+Author: Siyeolryu <tlduf9083@gmail.com>
+Date:   Mon Mar 16 20:08:57 2026 +0900
+
+    fix: Vercel builds deprecated 경고 해결 (2026 베스트 프랙티스 적용)
+    
+    - vercel.json: builds/routes → rewrites로 현대화
+    - DEPRECATED builds 속성 제거 (레거시 기능)
+    - Zero-configuration 접근으로 자동 프레임워크 감지 활용
+    - Dashboard 프로젝트 설정 정상 작동 활성화
+    - 문서 업데이트: 2026 Vercel FastAPI 배포 가이드
+    
+    Fixes: WARNING - 'Due to builds existing in your configuration file, the Build and Development Settings defined in your Project Settings will not apply'
+    
+    References:
+    - https://vercel.com/docs/frameworks/backend/fastapi
+    - https://vercel.com/docs/project-configuration
+    - https://vercel.com/docs/rewrites
+    
+    🤖 Generated with Claude Code
+    Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+
+diff --git a/vercel.json b/vercel.json
+index 33a6882..a8cdb3c 100644
+--- a/vercel.json
++++ b/vercel.json
+@@ -1,18 +1,8 @@
+ {
+-  "version": 2,
+-  "builds": [
++  "rewrites": [
+     {
+-      "src": "api/index.py",
+-      "use": "@vercel/python",
+-      "config": {
+-        "maxLambdaSize": "250mb"
+-      }
+-    }
+-  ],
+-  "routes": [
+-    {
+-      "src": "/(.*)",
+-      "dest": "api/index.py"
++      "source": "/(.*)",
++      "destination": "/api/index"
+     }
+   ]
+ }

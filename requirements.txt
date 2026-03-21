@@ -1,9 +1,31 @@
-requests>=2.31.0
-python-dotenv>=1.0.0
-supabase>=2.3.0,<2.10.0
-python-dateutil>=2.8.2
+# HomeSignal AI Dependencies
+# Core dependencies for FastAPI, Supabase, and AI
 
-# 예측 모델 (predict_model.py)
+# Backend (FastAPI)
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.0
+pydantic-settings>=2.0
+
+# Database
+supabase>=2.3.0,<2.10.0
+redis>=5.0
+psycopg>=3.1.0
+
+# AI & HTTP
+openai>=1.10.0
+anthropic>=0.18.0
+httpx[http2]>=0.26.0
+requests>=2.31.0
+
+# Utils
+python-dotenv>=1.0.0
+python-dateutil>=2.8.2
+pyyaml>=6.0
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+
+# ML & Data Analysis (Note: May exceed Vercel 500MB limit if all installed)
 pandas>=2.0.0
 numpy>=1.26.0
 scikit-learn>=1.4.0

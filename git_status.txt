@@ -1,0 +1,61 @@
+﻿On branch main
+Your branch is ahead of 'origin/main' by 3 commits.
+  (use "git push" to publish your local commits)
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   .env.example
+	modified:   .vercelignore
+	modified:   CLAUDE.md
+	modified:   README.md
+	modified:   db_Schema(Sql)_mokdb.md
+	modified:   docs/0228dev1.md
+	modified:   docs/design_system.md
+	modified:   docs/작업_보고서_0302-0306.md
+	modified:   migrations/004_create_ml_features_tables.sql
+	modified:   requirements.txt
+	modified:   scripts/generate_ml_features.py
+	modified:   scripts/train_forecast_model.py
+	modified:   src/chat/planner/decomposer.py
+	modified:   src/chat/service.py
+	modified:   src/config/settings.py
+	modified:   src/forecast/model_loader.py
+	modified:   src/forecast/rise_point_detector.py
+	modified:   src/forecast/service.py
+	modified:   src/main.py
+	modified:   src/shared/data_repository.py
+	modified:   src/shared/database.py
+	modified:   src/shared/vector_db.py
+	modified:   tests/chat/test_keyword_extraction.py
+	modified:   tests/conftest.py
+	modified:   tests/test_ml_features.py
+	modified:   tests/test_planner.py
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	0313 보고서.md
+	deginer_Q&A_test.md
+	desgin_system_guide.md
+	designer_rivew.md
+	docs/07_API_Contract_Rules.md
+	docs/08_Vercel_Architecture_Guide.md
+	docs/13_Database_Schema_and_Relationships.md
+	docs/GITHUB_LOCAL_DIFF_REPORT_2026-03-13.md
+	docs/P0_FIX_RESULTS.md
+	docs/P1_FIX_RESULTS.md
+	docs/TEST_RESULTS.md
+	docs/VERCEL_DEPLOYMENT_STATUS_2026-03-13.md
+	docs/디자인시스템가이드.md
+	docs/작업_보고서_2026-03-09.md
+	git_status.txt
+	migrations/005_add_train_test_split.sql
+	migrations/006_add_rpc_methods.sql
+	scripts/split_train_test_data.py
+	scripts/validate_data_integrity.py
+	test_chat_request.json
+	test_claude_api.py
+	test_claude_api_fixed.py
+	tests/test_rpc_methods.py
+
+no changes added to commit (use "git add" and/or "git commit -a")

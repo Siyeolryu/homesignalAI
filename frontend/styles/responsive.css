@@ -1,0 +1,96 @@
+/**
+ * HomeSignal AI Responsive Styles
+ * 
+ * 반응형 브레이크포인트 및 모바일 최적화
+ */
+
+/* Desktop: 1440px */
+@media (min-width: 1440px) {
+  .container {
+    max-width: 1440px;
+  }
+}
+
+/* Laptop: 1280px */
+@media (max-width: 1280px) {
+  .summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .chart-container {
+    height: 350px;
+  }
+}
+
+/* Tablet: 768px */
+@media (max-width: 768px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .chart-container {
+    height: 300px;
+  }
+  
+  .nav-links {
+    display: none;
+  }
+  
+  .search-bar {
+    display: none;
+  }
+  
+  .scenario-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Mobile: 375px */
+@media (max-width: 375px) {
+  .hero-title {
+    font-size: 2rem;
+  }
+  
+  .card-padding {
+    padding: 1rem;
+  }
+  
+  .chart-container {
+    height: 250px;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .hover-lift:hover {
+    transform: none;
+  }
+  
+  button,
+  a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Accessibility: Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .card-surface {
+    border-width: 2px;
+  }
+  
+  .text-muted {
+    color: #D1D5DB;
+  }
+}

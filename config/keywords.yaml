@@ -1,0 +1,184 @@
+# HomeSignal AI - 키워드 설정
+# 부동산 시계열 예측 및 뉴스 분석용 키워드 정의
+
+categories:
+  transport:
+    primary:
+      - "GTX"
+      - "GTX-C"
+      - "GTX-A"
+      - "청량리역"
+      - "경춘선"
+      - "1호선"
+      - "6호선"
+      - "경의중앙선"
+      - "서울역세권"
+    synonyms:
+      - "수도권광역급행철도"
+      - "환승센터"
+      - "광역철도"
+      - "급행철도"
+      - "복선전철"
+      - "광역버스"
+      - "BRT"
+      - "트램"
+      - "경전철"
+    
+  redevelopment:
+    primary:
+      - "재개발"
+      - "뉴타운"
+      - "이문휘경뉴타운"
+      - "청량리 7구역"
+    synonyms:
+      - "정비사업"
+      - "재건축"
+      - "리모델링"
+      - "도시정비"
+      - "주거환경개선"
+    
+  supply:
+    primary:
+      - "분양"
+      - "입주"
+      - "착공"
+      - "준공"
+    synonyms:
+      - "조합원"
+      - "특별공급"
+      - "청약"
+      - "일반분양"
+      - "사전청약"
+    
+  policy:
+    primary:
+      - "금리"
+      - "대출"
+      - "규제"
+      - "정책"
+      - "청약제도"
+      - "재건축초과이익환수제"
+      - "종부세"
+      - "양도세"
+      - "취득세"
+    synonyms:
+      - "기준금리"
+      - "DSR"
+      - "LTV"
+      - "DTI"
+      - "전매제한"
+      - "분양가상한제"
+      - "1순위"
+      - "무주택"
+      - "실거주"
+      - "전매금지"
+      - "분양권전매"
+      - "재당첨제한"
+  
+  location_specific:
+    primary:
+      - "청량리 청년주택"
+      - "회기역세권"
+      - "휘경동 재정비"
+      - "이문동 역세권"
+      - "용두동 뉴타운"
+      - "답십리 재개발"
+      - "전농동 정비"
+      - "제기동 개발"
+    synonyms:
+      - "동대문구청"
+      - "경희대"
+      - "한국외대"
+      - "서울시립대"
+      - "청량리 롯데캐슬"
+  
+  development_projects:
+    primary:
+      - "청량리 민자역사"
+      - "이문·휘경 공공재개발"
+      - "전농4구역"
+      - "답십리11구역"
+      - "용두4구역"
+      - "동대문디자인플라자"
+    synonyms:
+      - "공공재개발"
+      - "민간재개발"
+      - "도시재생"
+      - "역세권개발"
+      - "복합개발"
+  
+  economic_indicators:
+    primary:
+      - "집값"
+      - "전세가"
+      - "매매가"
+      - "실거래가"
+      - "시세"
+    synonyms:
+      - "전월세"
+      - "갭투자"
+      - "깡통전세"
+      - "역전세"
+      - "전세대출"
+      - "보증금"
+  
+  social_issues:
+    primary:
+      - "학군"
+      - "학교"
+      - "교육환경"
+      - "공원"
+      - "녹지"
+    synonyms:
+      - "초등학교"
+      - "중학교"
+      - "특목고"
+      - "학원가"
+      - "청량리숲"
+
+  election:
+    primary:
+      - "선거"
+      - "지방선거"
+      - "총선"
+      - "대선"
+      - "선거 공약"
+      - "부동산 공약"
+      - "지역구 공약"
+      - "시정 운영 계획"
+    synonyms:
+      - "당선자"
+      - "후보자 발표"
+      - "정비사업 활성화"
+      - "신속통합"
+      - "모아타운"
+      - "규제 철폐"
+      - "조기개통"
+      - "예산 확보"
+      - "구청장 직속"
+      - "민선 8기"
+      - "민선 9기"
+      - "개발 속도전"
+      - "이행률"
+      - "공약 추진"
+
+# 변수 매핑 (피처 엔지니어링용)
+feature_mapping:
+  news_freq_gtx:
+    - transport
+  news_freq_redev:
+    - redevelopment
+  news_freq_supply:
+    - supply
+  news_freq_policy:
+    - policy
+  news_freq_location:
+    - location_specific
+  news_freq_projects:
+    - development_projects
+  news_freq_economic:
+    - economic_indicators
+  news_freq_social:
+    - social_issues
+  news_freq_election:
+    - election
