@@ -208,7 +208,7 @@ export function AIChatbot() {
                 }}
               >
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-primary/10 to-primary/5">
+                <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-primary/10 to-primary/5 flex-shrink-0">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
                       <Sparkles className="h-5 w-5 text-primary" />
@@ -231,8 +231,39 @@ export function AIChatbot() {
                   </Button>
                 </div>
 
-                {/* Messages */}
-                <ScrollArea className="flex-1 p-6" ref={scrollAreaRef}>
+                {/* Input - 상단으로 이동 */}
+                <div className="p-6 border-b border-border bg-secondary/30 flex-shrink-0">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="text"
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && !isLoading && handleSend()}
+                      placeholder="메시지를 입력하세요... (Shift+Enter로 줄바꿈)"
+                      disabled={isLoading}
+                      className="flex-1 h-11 px-4 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    />
+                    <Button
+                      size="icon"
+                      className="h-11 w-11 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-all"
+                      onClick={handleSend}
+                      disabled={isLoading || !input.trim()}
+                    >
+                      {isLoading ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <Send className="h-5 w-5" />
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2 text-center">
+                    AI가 생성한 답변은 참고용이며, 투자 결정은 신중히 하시기 바랍니다.
+                  </p>
+                </div>
+
+                {/* Messages - 스크롤 가능한 영역 */}
+                <div className="flex-1 overflow-hidden">
+                  <ScrollArea className="h-full p-6" ref={scrollAreaRef}>
                   <div className="space-y-4">
                     {messages.map((message) => (
                       <div
@@ -287,36 +318,7 @@ export function AIChatbot() {
                       </div>
                     )}
                   </div>
-                </ScrollArea>
-
-                {/* Input */}
-                <div className="p-6 border-t border-border bg-secondary/30">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="text"
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && !isLoading && handleSend()}
-                      placeholder="메시지를 입력하세요... (Shift+Enter로 줄바꿈)"
-                      disabled={isLoading}
-                      className="flex-1 h-11 px-4 rounded-xl bg-background border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                    />
-                    <Button
-                      size="icon"
-                      className="h-11 w-11 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-all"
-                      onClick={handleSend}
-                      disabled={isLoading || !input.trim()}
-                    >
-                      {isLoading ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                      ) : (
-                        <Send className="h-5 w-5" />
-                      )}
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2 text-center">
-                    AI가 생성한 답변은 참고용이며, 투자 결정은 신중히 하시기 바랍니다.
-                  </p>
+                  </ScrollArea>
                 </div>
               </Card>
             </motion.div>
