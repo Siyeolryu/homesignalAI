@@ -159,9 +159,9 @@ export function buildContextPrompt(data: any, userQuery: string): string {
       contextSections.push(`- 3개월 후: ${(p.pred_3m_10k / 10000).toFixed(1)}억원 (${p.change_3m_pct > 0 ? '+' : ''}${p.change_3m_pct?.toFixed(1)}%)`);
     } else {
       // 전체 동 요약
-      const avgPrice = predictions.reduce((s, p) => s + p.current_price_10k, 0) / predictions.length;
-      const avgChange1m = predictions.reduce((s, p) => s + (p.change_1m_pct || 0), 0) / predictions.length;
-      const risingCount = predictions.filter((p) => (p.change_1m_pct || 0) > 0).length;
+      const avgPrice = predictions.reduce((s: number, p: any) => s + p.current_price_10k, 0) / predictions.length;
+      const avgChange1m = predictions.reduce((s: number, p: any) => s + (p.change_1m_pct || 0), 0) / predictions.length;
+      const risingCount = predictions.filter((p: any) => (p.change_1m_pct || 0) > 0).length;
 
       contextSections.push(`### 전체 시장 요약`);
       contextSections.push(`- 분석 동 수: ${predictions.length}개`);
@@ -186,7 +186,7 @@ export function buildContextPrompt(data: any, userQuery: string): string {
   // 3. 뉴스 시그널
   if (news && news.length > 0) {
     contextSections.push("\n## 📰 최신 뉴스 시그널\n");
-    news.slice(0, 3).forEach((n, idx) => {
+    news.slice(0, 3).forEach((n: any, idx: number) => {
       const date = n.published_at?.split('T')[0] || '';
       contextSections.push(`${idx + 1}. ${n.title} (${date})`);
       if (n.keywords && n.keywords.length > 0) {
@@ -198,7 +198,7 @@ export function buildContextPrompt(data: any, userQuery: string): string {
   // 4. 거래 통계
   if (trades && trades.length > 0) {
     contextSections.push("\n## 📈 최근 거래 통계 (2025년~)\n");
-    const avgTradePrice = trades.reduce((s, t) => s + (t.price_10k || 0), 0) / trades.length;
+    const avgTradePrice = trades.reduce((s: number, t: any) => s + (t.price_10k || 0), 0) / trades.length;
     contextSections.push(`- 최근 거래 건수: ${trades.length}건`);
     contextSections.push(`- 평균 거래가: ${(avgTradePrice / 10000).toFixed(1)}억원`);
   }
