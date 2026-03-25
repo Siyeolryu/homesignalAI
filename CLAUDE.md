@@ -60,13 +60,15 @@ HomeSignal AI is a real estate price prediction platform for Seoul's northeast d
 ### Frontend (Next.js)
 
 ```bash
-# Install dependencies
-npm install
-# or
+# Install dependencies (pnpm preferred)
 pnpm install
+# or
+npm install
 
 # Development server
 npm run dev          # http://localhost:3000
+# Alternative with Turbopack (may have issues on Windows - see Troubleshooting)
+npm run dev:turbo
 
 # Production build
 npm run build
@@ -75,6 +77,8 @@ npm run start
 # Linting
 npm run lint
 ```
+
+**Note:** This project uses pnpm as the preferred package manager (see `pnpm` config in package.json).
 
 ### Python ML Pipeline
 
@@ -97,7 +101,7 @@ python test_ml_pipeline.py              # Validate ML pipeline setup
 python test_supabase_connection.py      # Test database connection
 ```
 
-**Note:** Python scripts require `homesignal.env` file (see `.env.example`). The ML pipeline must be run manually - no automated scheduler is configured by default.
+**Note:** Python scripts require `homesignal.env` file (see environment variable examples below). The ML pipeline must be run manually - no automated scheduler is configured by default.
 
 ## Environment Variables
 
@@ -136,16 +140,18 @@ SUPABASE_KEY=your_supabase_service_role_key     # Same as SUPABASE_SERVICE_KEY a
 **Notes:**
 - API keys are optional for running `predict_model.py` (only needed for `collect_data.py`)
 - `SUPABASE_KEY` should be the service role key for write access
-- Use `.env.example` as template (do not commit actual keys)
+- No `.env.example` file exists - use the examples shown above as templates
+- **Never commit** `.env` or `homesignal.env` files (already in `.gitignore`)
 
 ### Environment Variable Files
 ```
-.env              → Next.js frontend & API routes
-homesignal.env    → Python ML pipeline
-.env.example      → Template (committed to git)
+.env              → Next.js frontend & API routes (create manually)
+homesignal.env    → Python ML pipeline (create manually)
 ```
 
-**IMPORTANT:** Never commit `.env` or `homesignal.env` files. They are already in `.gitignore`.
+**IMPORTANT:**
+- Never commit `.env` or `homesignal.env` files. They are already in `.gitignore`.
+- No `.env.example` template file exists - use the examples shown in the sections above to create your environment files.
 
 ## Architecture & Data Flow
 
@@ -247,12 +253,11 @@ Visualization outputs:
 # 1. Clone and install dependencies
 git clone <repository-url>
 cd home_signal_ai
-npm install
+pnpm install  # or npm install
 pip install -r requirements.txt
 
 # 2. Configure environment variables
-cp .env.example .env
-# Edit .env with your Supabase and Anthropic keys
+# Create .env file with Supabase and Anthropic keys (see Environment Variables section)
 # Create homesignal.env with API keys (optional for initial testing)
 
 # 3. Setup Supabase database
@@ -462,20 +467,38 @@ python collect_data.py update
 python system_health_check.py  # Shows all env vars
 ```
 
+**Issue: Turbopack dev server fails on Windows (NUL device error)**
+```bash
+# Solution: Use webpack instead of Turbopack
+npm run dev  # Uses webpack by default
+
+# Or explicitly disable Turbopack:
+TURBOPACK=0 npm run dev
+
+# Note: next.config.mjs is configured to work with webpack on Windows
+# The dev:turbo script is available but may not work on all Windows systems
+```
+
 ## Important Notes
 
+- **Package Manager:** pnpm is the preferred package manager (see `pnpm` config in package.json). npm also works but pnpm is recommended.
 - **News Features:** 1-month lag prevents look-ahead bias. Pre-2026-02 data has news features set to 0.
 - **Target Districts:** Only 5 districts (동대문구, 성북구, 중랑구, 강북구, 도봉구). Do not add other districts without updating `collect_data.py:TARGET_DISTRICTS`.
 - **Font Rendering:** ML script uses "Malgun Gothic" for Korean. May need adjustment on non-Windows systems (see Troubleshooting section).
 - **API Rate Limits:** 공공데이터포털 API has rate limits. `collect_data.py` includes 1-second delays between requests.
 - **Vercel Deployment:** `vercel.json` configured for hybrid Next.js + Python deployment (Python backend not actively used).
 - **Test Scripts:** Always run `system_health_check.py` or `test_ml_pipeline.py` before reporting issues - they provide detailed diagnostics.
+- **Tailwind CSS 4:** Uses new CSS-first configuration (no traditional config file). See Component Patterns section.
+- **Windows Development:** Turbopack may have issues on Windows - use standard `npm run dev` which uses webpack by default.
 
 ## Component Patterns
 
 - Use `"use client"` directive for interactive components
 - Radix UI components imported from `@/components/ui/`
-- Styling via Tailwind CSS with `cn()` utility for conditional classes
+- Styling via Tailwind CSS 4 with `cn()` utility for conditional classes
+  - **Note:** This project uses Tailwind CSS 4's new CSS-first configuration
+  - No traditional `tailwind.config.js` file - configuration is in `@tailwindcss/postcss` plugin
+  - Global styles defined in `app/globals.css`
 - Framer Motion for animations (AnimatePresence, motion.div)
 - Recharts for data visualization
 - React Hook Form + Zod for form validation (if adding forms)
@@ -621,9 +644,10 @@ npx tsc --noEmit                     # Check TypeScript errors
 
 | File | Used By | Purpose |
 |------|---------|---------|
-| `.env` | Next.js | Frontend + API routes config |
-| `homesignal.env` | Python | ML pipeline + data collection |
-| `.env.example` | Template | Reference for required variables |
+| `.env` | Next.js | Frontend + API routes config (create manually) |
+| `homesignal.env` | Python | ML pipeline + data collection (create manually) |
+
+**Note:** No template files exist - refer to the Environment Variables section for examples.
 
 ### API Endpoints
 
